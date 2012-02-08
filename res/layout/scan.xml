@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:layout_width="fill_parent" android:layout_height="fill_parent"
+	android:orientation="vertical">
+	<TableLayout android:stretchColumns="1"
+		android:layout_height="wrap_content" android:layout_width="fill_parent">
+		<TableRow>
+			<TextView android:text="@string/country" android:padding="3dip" android:layout_height="wrap_content" android:layout_gravity="center_vertical"/>
+			<Spinner android:prompt="@string/country" android:id="@+id/scan_countrySpinner"
+				android:drawSelectorOnTop="true" />
+		</TableRow>
+		<TableRow android:id="@+id/scan_atscTypeRow">
+			<TextView android:text="@string/atscType" android:padding="3dip" android:layout_gravity="center_vertical"/>
+			<Spinner android:prompt="@string/atscType" android:id="@+id/scan_atscTypeSpinner"
+				android:drawSelectorOnTop="true" />
+		</TableRow>
+		<TableRow>
+			<TextView android:text="@string/fileName" android:padding="3dip" android:layout_gravity="center_vertical"/>
+			<EditText android:id="@+id/scan_fileNameView" />
+		</TableRow>
+		<TableRow>
+			<Button android:layout_column="1" android:text="@string/scan"
+				android:id="@+id/scan_scanButton" />
+		</TableRow>
+	</TableLayout>
+	<ScrollView android:id="@+id/scan_scrollView"
+		android:layout_width="fill_parent" android:layout_height="fill_parent">
+		<TextView android:id="@+id/scan_textView"
+			android:layout_width="fill_parent" android:layout_height="fill_parent" />
+	</ScrollView>
+</LinearLayout>
