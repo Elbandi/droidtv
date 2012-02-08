@@ -1,3 +1,4 @@
+#!/bin/bash
 #******************************************************************************
 #*  DroidTV, live TV on Android devices with host USB port and a DVB tuner    *
 #*  Copyright (C) 2012  Christian Ulrich <chrulri@gmail.com>                  *
@@ -15,6 +16,4 @@
 #*  You should have received a copy of the GNU General Public License         *
 #*  along with this program.  If not, see <http://www.gnu.org/licenses/>.     *
 #******************************************************************************
-
-APP_ABI := armeabi-v7a
-APP_PLATFORM := android-8
+javah -classpath ../bin/classes com.chrulri.droidtv.DvbTuner

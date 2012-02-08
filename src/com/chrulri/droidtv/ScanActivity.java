@@ -1,4 +1,21 @@
-package chrulri.livetv;
+/******************************************************************************
+ *  DroidTV, live TV on Android devices with host USB port and a DVB tuner    *
+ *  Copyright (C) 2012  Christian Ulrich <chrulri@gmail.com>                  *
+ *                                                                            *
+ *  This program is free software: you can redistribute it and/or modify      *
+ *  it under the terms of the GNU General Public License as published by      *
+ *  the Free Software Foundation, either version 3 of the License, or         *
+ *  (at your option) any later version.                                       *
+ *                                                                            *
+ *  This program is distributed in the hope that it will be useful,           *
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of            *
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the             *
+ *  GNU General Public License for more details.                              *
+ *                                                                            *
+ *  You should have received a copy of the GNU General Public License         *
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.     *
+ ******************************************************************************/
+package com.chrulri.droidtv;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -8,6 +25,10 @@ import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.Date;
 import java.util.Locale;
+
+import com.chrulri.droidtv.Utils.Prefs;
+import com.chrulri.droidtv.Utils.ProcessUtils;
+import com.chrulri.droidtv.Utils.StringUtils;
 
 import android.app.Activity;
 import android.os.AsyncTask;
@@ -25,9 +46,6 @@ import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-import chrulri.livetv.Utils.Prefs;
-import chrulri.livetv.Utils.ProcessUtils;
-import chrulri.livetv.Utils.StringUtils;
 
 public class ScanActivity extends Activity implements OnClickListener,
 		OnLongClickListener {
