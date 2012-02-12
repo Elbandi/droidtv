@@ -7,8 +7,6 @@
  *		    Andre Draszik <ad@convergence.de>
  *		    for convergence integrated media GmbH
  *
- * Copyright (C) Manu Abraham <abraham.manu@gmail.com>
- *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
  * as published by the Free Software Foundation; either version 2.1
@@ -28,8 +26,7 @@
 #ifndef _DVBFRONTEND_H_
 #define _DVBFRONTEND_H_
 
-#include <asm/types.h>
-
+#include <linux/types.h>
 
 typedef enum fe_type {
 	FE_QPSK,
@@ -64,9 +61,12 @@ typedef enum fe_caps {
 	FE_CAN_HIERARCHY_AUTO		= 0x100000,
 	FE_CAN_8VSB			= 0x200000,
 	FE_CAN_16VSB			= 0x400000,
-	FE_NEEDS_BENDING		= 0x20000000, // not supported anymore, don't use (frontend requires frequency bending)
-	FE_CAN_RECOVER			= 0x40000000, // frontend can recover from a cable unplug automatically
-	FE_CAN_MUTE_TS			= 0x80000000  // frontend can stop spurious TS data output
+	FE_HAS_EXTENDED_CAPS		= 0x800000,   /* We need more bitspace for newer APIs, indicate this. */
+	FE_CAN_TURBO_FEC		= 0x8000000,  /* frontend supports "turbo fec modulation" */
+	FE_CAN_2G_MODULATION		= 0x10000000, /* frontend supports "2nd generation modulation" (DVB-S2) */
+	FE_NEEDS_BENDING		= 0x20000000, /* not supported anymore, don't use (frontend requires frequency bending) */
+	FE_CAN_RECOVER			= 0x40000000, /* frontend can recover from a cable unplug automatically */
+	FE_CAN_MUTE_TS			= 0x80000000  /* frontend can stop spurious TS data output */
 } fe_caps_t;
 
 
@@ -122,15 +122,15 @@ typedef enum fe_sec_mini_cmd {
 
 
 typedef enum fe_status {
-	FE_HAS_SIGNAL	= 0x01,   /*  found something above the noise level */
-	FE_HAS_CARRIER	= 0x02,   /*  found a DVB signal  */
-	FE_HAS_VITERBI	= 0x04,   /*  FEC is stable  */
-	FE_HAS_SYNC	= 0x08,   /*  found sync bytes  */
-	FE_HAS_LOCK	= 0x10,   /*  everything's working... */
-	FE_TIMEDOUT	= 0x20,   /*  no lock within the last ~2 seconds */
-	FE_REINIT	= 0x40    /*  frontend was reinitialized,  */
-} fe_status_t;			  /*  application is recommended to reset */
-				  /*  DiSEqC, tone and parameters */
+	FE_HAS_SIGNAL	= 0x01,   /* found something above the noise level */
+	FE_HAS_CARRIER	= 0x02,   /* found a DVB signal  */
+	FE_HAS_VITERBI	= 0x04,   /* FEC is stable  */
+	FE_HAS_SYNC	= 0x08,   /* found sync bytes  */
+	FE_HAS_LOCK	= 0x10,   /* everything's working... */
+	FE_TIMEDOUT	= 0x20,   /* no lock within the last ~2 seconds */
+	FE_REINIT	= 0x40    /* frontend was reinitialized,  */
+} fe_status_t;			  /* application is recommended to reset */
+				  /* DiSEqC, tone and parameters */
 
 typedef enum fe_spectral_inversion {
 	INVERSION_OFF,
@@ -149,7 +149,9 @@ typedef enum fe_code_rate {
 	FEC_6_7,
 	FEC_7_8,
 	FEC_8_9,
-	FEC_AUTO
+	FEC_AUTO,
+	FEC_3_5,
+	FEC_9_10,
 } fe_code_rate_t;
 
 
@@ -162,20 +164,31 @@ typedef enum fe_modulation {
 	QAM_256,
 	QAM_AUTO,
 	VSB_8,
-	VSB_16
+	VSB_16,
+	PSK_8,
+	APSK_16,
+	APSK_32,
+	DQPSK,
 } fe_modulation_t;
 
 typedef enum fe_transmit_mode {
 	TRANSMISSION_MODE_2K,
 	TRANSMISSION_MODE_8K,
-	TRANSMISSION_MODE_AUTO
+	TRANSMISSION_MODE_AUTO,
+	TRANSMISSION_MODE_4K,
+	TRANSMISSION_MODE_1K,
+	TRANSMISSION_MODE_16K,
+	TRANSMISSION_MODE_32K,
 } fe_transmit_mode_t;
 
 typedef enum fe_bandwidth {
 	BANDWIDTH_8_MHZ,
 	BANDWIDTH_7_MHZ,
 	BANDWIDTH_6_MHZ,
-	BANDWIDTH_AUTO
+	BANDWIDTH_AUTO,
+	BANDWIDTH_5_MHZ,
+	BANDWIDTH_10_MHZ,
+	BANDWIDTH_1_712_MHZ,
 } fe_bandwidth_t;
 
 
@@ -184,7 +197,10 @@ typedef enum fe_guard_interval {
 	GUARD_INTERVAL_1_16,
 	GUARD_INTERVAL_1_8,
 	GUARD_INTERVAL_1_4,
-	GUARD_INTERVAL_AUTO
+	GUARD_INTERVAL_AUTO,
+	GUARD_INTERVAL_1_128,
+	GUARD_INTERVAL_19_128,
+	GUARD_INTERVAL_19_256,
 } fe_guard_interval_t;
 
 
@@ -236,6 +252,143 @@ struct dvb_frontend_parameters {
 };
 
 
+struct dvb_frontend_event {
+	fe_status_t status;
+	struct dvb_frontend_parameters parameters;
+};
+
+/* S2API Commands */
+#define DTV_UNDEFINED		0
+#define DTV_TUNE		1
+#define DTV_CLEAR		2
+#define DTV_FREQUENCY		3
+#define DTV_MODULATION		4
+#define DTV_BANDWIDTH_HZ	5
+#define DTV_INVERSION		6
+#define DTV_DISEQC_MASTER	7
+#define DTV_SYMBOL_RATE		8
+#define DTV_INNER_FEC		9
+#define DTV_VOLTAGE		10
+#define DTV_TONE		11
+#define DTV_PILOT		12
+#define DTV_ROLLOFF		13
+#define DTV_DISEQC_SLAVE_REPLY	14
+
+/* Basic enumeration set for querying unlimited capabilities */
+#define DTV_FE_CAPABILITY_COUNT	15
+#define DTV_FE_CAPABILITY	16
+#define DTV_DELIVERY_SYSTEM	17
+
+/* ISDB-T and ISDB-Tsb */
+#define DTV_ISDBT_PARTIAL_RECEPTION	18
+#define DTV_ISDBT_SOUND_BROADCASTING	19
+
+#define DTV_ISDBT_SB_SUBCHANNEL_ID	20
+#define DTV_ISDBT_SB_SEGMENT_IDX	21
+#define DTV_ISDBT_SB_SEGMENT_COUNT	22
+
+#define DTV_ISDBT_LAYERA_FEC			23
+#define DTV_ISDBT_LAYERA_MODULATION		24
+#define DTV_ISDBT_LAYERA_SEGMENT_COUNT		25
+#define DTV_ISDBT_LAYERA_TIME_INTERLEAVING	26
+
+#define DTV_ISDBT_LAYERB_FEC			27
+#define DTV_ISDBT_LAYERB_MODULATION		28
+#define DTV_ISDBT_LAYERB_SEGMENT_COUNT		29
+#define DTV_ISDBT_LAYERB_TIME_INTERLEAVING	30
+
+#define DTV_ISDBT_LAYERC_FEC			31
+#define DTV_ISDBT_LAYERC_MODULATION		32
+#define DTV_ISDBT_LAYERC_SEGMENT_COUNT		33
+#define DTV_ISDBT_LAYERC_TIME_INTERLEAVING	34
+
+#define DTV_API_VERSION		35
+
+#define DTV_CODE_RATE_HP	36
+#define DTV_CODE_RATE_LP	37
+#define DTV_GUARD_INTERVAL	38
+#define DTV_TRANSMISSION_MODE	39
+#define DTV_HIERARCHY		40
+
+#define DTV_ISDBT_LAYER_ENABLED	41
+
+#define DTV_ISDBS_TS_ID		42
+
+#define DTV_DVBT2_PLP_ID	43
+
+#define DTV_MAX_COMMAND				DTV_DVBT2_PLP_ID
+
+typedef enum fe_pilot {
+	PILOT_ON,
+	PILOT_OFF,
+	PILOT_AUTO,
+} fe_pilot_t;
+
+typedef enum fe_rolloff {
+	ROLLOFF_35, /* Implied value in DVB-S, default for DVB-S2 */
+	ROLLOFF_20,
+	ROLLOFF_25,
+	ROLLOFF_AUTO,
+} fe_rolloff_t;
+
+typedef enum fe_delivery_system {
+	SYS_UNDEFINED,
+	SYS_DVBC_ANNEX_AC,
+	SYS_DVBC_ANNEX_B,
+	SYS_DVBT,
+	SYS_DSS,
+	SYS_DVBS,
+	SYS_DVBS2,
+	SYS_DVBH,
+	SYS_ISDBT,
+	SYS_ISDBS,
+	SYS_ISDBC,
+	SYS_ATSC,
+	SYS_ATSCMH,
+	SYS_DMBTH,
+	SYS_CMMB,
+	SYS_DAB,
+	SYS_DVBT2,
+} fe_delivery_system_t;
+
+struct dtv_cmds_h {
+	char	*name;		/* A display name for debugging purposes */
+
+	__u32	cmd;		/* A unique ID */
+
+	/* Flags */
+	__u32	set:1;		/* Either a set or get property */
+	__u32	buffer:1;	/* Does this property use the buffer? */
+	__u32	reserved:30;	/* Align */
+};
+
+struct dtv_property {
+	__u32 cmd;
+	__u32 reserved[3];
+	union {
+		__u32 data;
+		struct {
+			__u8 data[32];
+			__u32 len;
+			__u32 reserved1[3];
+			void *reserved2;
+		} buffer;
+	} u;
+	int result;
+} __attribute__ ((packed));
+
+/* num of properties cannot exceed DTV_IOCTL_MAX_MSGS per ioctl */
+#define DTV_IOCTL_MAX_MSGS 64
+
+struct dtv_properties {
+	__u32 num;
+	struct dtv_property *props;
+};
+
+#define FE_SET_PROPERTY		   _IOW('o', 82, struct dtv_properties)
+#define FE_GET_PROPERTY		   _IOR('o', 83, struct dtv_properties)
+
+
 /**
  * When set, this flag will disable any zigzagging or other "normal" tuning
  * behaviour. Additionally, there will be no automatic monitoring of the lock
@@ -266,383 +419,8 @@ struct dvb_frontend_parameters {
 #define FE_SET_FRONTEND		   _IOW('o', 76, struct dvb_frontend_parameters)
 #define FE_GET_FRONTEND		   _IOR('o', 77, struct dvb_frontend_parameters)
 #define FE_SET_FRONTEND_TUNE_MODE  _IO('o', 81) /* unsigned int */
-
-#define FE_DISHNETWORK_SEND_LEGACY_CMD _IO('o', 80) /* unsigned int */
-
-/*
- * References:
- * DVB-S : EN 300 421
- * DVB-S2: EN 302 307, TR 102 376, EN 301 210
- * DVB-C : EN 300 429
- * DVB-T : EN 300 744
- * DVB-H : EN 300 304
- * ATSC  : A/53A
- */
-
-/*
- * Delivery Systems
- * needs to set/queried for multistandard frontends
- */
-enum dvbfe_delsys {
-	DVBFE_DELSYS_DVBS		= (1 <<  0),
-	DVBFE_DELSYS_DSS		= (1 <<  1),
-	DVBFE_DELSYS_DVBS2		= (1 <<  2),
-	DVBFE_DELSYS_DVBC		= (1 <<  3),
-	DVBFE_DELSYS_DVBT		= (1 <<  4),
-	DVBFE_DELSYS_DVBH		= (1 <<  5),
-	DVBFE_DELSYS_ATSC		= (1 <<  6),
-	DVBFE_DELSYS_DUMMY		= (1 << 31)
-};
-#define DVBFE_GET_DELSYS		_IOR('o', 82, enum dvbfe_delsys)
-#define DVBFE_SET_DELSYS		_IOW('o', 87, enum dvbfe_delsys)
-
-/* Modulation types			*/
-enum dvbfe_modulation {
-	DVBFE_MOD_NONE			= (0 <<  0),
-	DVBFE_MOD_BPSK			= (1 <<  0),
-	DVBFE_MOD_QPSK			= (1 <<  1),
-	DVBFE_MOD_OQPSK			= (1 <<  2),
-	DVBFE_MOD_8PSK			= (1 <<  3),
-	DVBFE_MOD_16APSK		= (1 <<  4),
-	DVBFE_MOD_32APSK		= (1 <<  5),
-	DVBFE_MOD_QAM4			= (1 <<  6),
-	DVBFE_MOD_QAM16			= (1 <<  7),
-	DVBFE_MOD_QAM32			= (1 <<  8),
-	DVBFE_MOD_QAM64			= (1 <<  9),
-	DVBFE_MOD_QAM128		= (1 << 10),
-	DVBFE_MOD_QAM256		= (1 << 11),
-	DVBFE_MOD_QAM512		= (1 << 12),
-	DVBFE_MOD_QAM1024		= (1 << 13),
-	DVBFE_MOD_QAMAUTO		= (1 << 14),
-	DVBFE_MOD_OFDM			= (1 << 15),
-	DVBFE_MOD_COFDM			= (1 << 16),
-	DVBFE_MOD_VSB8			= (1 << 17),
-	DVBFE_MOD_VSB16			= (1 << 18),
-	DVBFE_MOD_AUTO			= (1 << 31)
-};
-
-/*
- * Convolution Code Rate (Viterbi Inner Code Rate)
- * DVB-S2 uses LDPC. Information on LDPC can be found at
- * http://www.ldpc-codes.com
- */
-enum dvbfe_fec {
-	DVBFE_FEC_NONE			= (0 <<  0),
-	DVBFE_FEC_1_4			= (1 <<  0),
-	DVBFE_FEC_1_3			= (1 <<  1),
-	DVBFE_FEC_2_5			= (1 <<  2),
-	DVBFE_FEC_1_2			= (1 <<  3),
-	DVBFE_FEC_3_5			= (1 <<  4),
-	DVBFE_FEC_2_3			= (1 <<  5),
-	DVBFE_FEC_3_4			= (1 <<  6),
-	DVBFE_FEC_4_5			= (1 <<  7),
-	DVBFE_FEC_5_6			= (1 <<  8),
-	DVBFE_FEC_6_7			= (1 <<  9),
-	DVBFE_FEC_7_8			= (1 << 10),
-	DVBFE_FEC_8_9			= (1 << 11),
-	DVBFE_FEC_9_10			= (1 << 12),
-	DVBFE_FEC_AUTO			= (1 << 31)
-};
-
-/* Frontend Inversion (I/Q Swap)	*/
-enum dvbfe_inversion {
-	DVBFE_INVERSION_OFF		= 0,
-	DVBFE_INVERSION_ON		= 1,
-	DVBFE_INVERSION_AUTO		= 2
-};
-
-/* DVB-S parameters			*/
-struct dvbs_params {
-	__u32				symbol_rate;
-
-	enum dvbfe_modulation		modulation;
-	enum dvbfe_fec			fec;
-};
-
-/* DSS parameters			*/
-struct dss_params {
-	__u32				symbol_rate;
-
-	enum dvbfe_modulation		modulation;
-	enum dvbfe_fec			fec;
-};
-
-/*
- * Rolloff Rate (Nyquist Filter Rolloff)
- * NOTE: DVB-S2 has rates of 0.20, 0.25, 0.35
- * Values are x100
- * Applies to DVB-S2
- */
-enum dvbfe_rolloff {
-	DVBFE_ROLLOFF_35		= 0,
-	DVBFE_ROLLOFF_25		= 1,
-	DVBFE_ROLLOFF_20		= 2,
-	DVBFE_ROLLOFF_UNKNOWN		= 3
-};
-
-/* DVB-S2 parameters			*/
-struct dvbs2_params {
-	__u32				symbol_rate;
-
-	enum dvbfe_modulation		modulation;
-	enum dvbfe_fec			fec;
-
-	/* Informational fields only	*/
-	enum dvbfe_rolloff		rolloff;
-
-	__u8				matype_1;
-	__u8				matype_2;
-	__u8				upl_1;
-	__u8				upl_2;
-	__u8				dfl_1;
-	__u8				dfl_2;
-	__u8				sync;
-	__u8				syncd_1;
-	__u8				syncd_2;
-
-	__u8				pad[32];
-};
-
-/* DVB-C parameters			*/
-struct dvbc_params {
-	__u32				symbol_rate;
-	enum dvbfe_modulation		modulation;
-	enum dvbfe_fec			fec;
-};
-
-/* DVB-T Channel bandwidth		*/
-enum dvbfe_bandwidth {
-	DVBFE_BANDWIDTH_8_MHZ		= (1 <<  0),
-	DVBFE_BANDWIDTH_7_MHZ		= (1 <<  1),
-	DVBFE_BANDWIDTH_6_MHZ		= (1 <<  2),
-	DVBFE_BANDWIDTH_5_MHZ		= (1 <<  3),
-	DVBFE_BANDWIDTH_AUTO		= (1 << 31)
-};
-
-/* DVB-T/DVB-H transmission mode	*/
-enum dvbfe_transmission_mode {
-	DVBFE_TRANSMISSION_MODE_2K	= (1 <<  0),
-	DVBFE_TRANSMISSION_MODE_4K	= (1 <<  1),
-	DVBFE_TRANSMISSION_MODE_8K	= (1 <<  2),
-	DVBFE_TRANSMISSION_MODE_AUTO	= (1 << 31)
-};
-
-/* DVB-T/DVB-H Guard interval		*/
-enum dvbfe_guard_interval {
-	DVBFE_GUARD_INTERVAL_1_32	= (1 <<  1),
-	DVBFE_GUARD_INTERVAL_1_16	= (1 <<  2),
-	DVBFE_GUARD_INTERVAL_1_8	= (1 <<  3),
-	DVBFE_GUARD_INTERVAL_1_4	= (1 <<  4),
-	DVBFE_GUARD_INTERVAL_AUTO	= (1 << 31)
-};
-
-/* DVB-T/DVB-H Hierarchial modulation	*/
-enum dvbfe_hierarchy {
-	DVBFE_HIERARCHY_OFF		= (1 <<  0),
-	DVBFE_HIERARCHY_ON		= (1 <<  1),
-	DVBFE_HIERARCHY_AUTO		= (1 <<  2)
-};
-
-/* DVB-T/DVB-H Rolloff's		*/
-enum dvbfe_alpha {
-	DVBFE_ALPHA_1			= (1 <<  0),
-	DVBFE_ALPHA_2			= (1 <<  1),
-	DVBFE_ALPHA_4			= (1 <<  2)
-};
-
-/* Stream priority (Hierachial coding)	*/
-enum dvbfe_stream_priority {
-	DVBFE_STREAM_PRIORITY_HP	= (0 << 0),
-	DVBFE_STREAM_PRIORITY_LP	= (1 << 0)
-};
-
-/* DVB-T parameters			*/
-struct dvbt_params {
-	enum dvbfe_modulation		constellation;
-	enum dvbfe_bandwidth		bandwidth;
-	enum dvbfe_fec			code_rate_HP;
-	enum dvbfe_fec			code_rate_LP;
-	enum dvbfe_transmission_mode	transmission_mode;
-	enum dvbfe_guard_interval	guard_interval;
-	enum dvbfe_hierarchy		hierarchy;
-	enum dvbfe_alpha		alpha;
-	enum dvbfe_stream_priority	priority;
-
-	__u8				pad[32];
-};
-
-/* DVB-H Interleaver type		*/
-enum dvbfe_interleaver {
-	DVBFE_INTERLEAVER_NATIVE	= (1 <<  0),
-	DVBFE_INTERLEAVER_INDEPTH	= (1 <<  1),
-	DVBFE_INTERLEAVER_AUTO		= (1 << 31)
-};
-
-/* DVB-H MPE-FEC Indicator		*/
-enum dvbfe_mpefec {
-	DVBFE_MPEFEC_OFF		= (1 <<  0),
-	DVBFE_MPEFEC_ON			= (1 <<  1)
-};
-
-/* DVB-H Timeslicing Indicator		*/
-enum dvbfe_timeslicing {
-	DVBFE_TIMESLICING_OFF		= (1 <<  0),
-	DVBFE_TIMESLICING_ON		= (1 <<  1)
-};
-
-/* DVB-H parameters			*/
-struct dvbh_params {
-	enum dvbfe_modulation		constellation;
-	enum dvbfe_fec			code_rate_HP;
-	enum dvbfe_fec			code_rate_LP;
-	enum dvbfe_transmission_mode	transmission_mode;
-	enum dvbfe_guard_interval	guard_interval;
-	enum dvbfe_hierarchy		hierarchy;
-	enum dvbfe_alpha		alpha;
-	enum dvbfe_interleaver		interleaver;
-	enum dvbfe_mpefec		mpefec;
-	enum dvbfe_timeslicing		timeslicing;
-	enum dvbfe_stream_priority	priority;
-
-	__u32				bandwidth;
-	__u8				pad[32];
-};
-
-/* ATSC parameters			*/
-struct atsc_params {
-	enum dvbfe_modulation		modulation;
-
-	__u8				pad[32];
-};
-
-/* DVB Frontend Tuning Parameters	*/
-struct dvbfe_params {
-	__u32				frequency;
-	enum fe_spectral_inversion	inversion;
-	enum dvbfe_delsys		delivery;
-
-	__u8				pad[32];
-
-	union {
-		struct dvbs_params	dvbs;
-		struct dss_params	dss;
-		struct dvbs2_params	dvbs2;
-		struct dvbc_params	dvbc;
-		struct dvbt_params	dvbt;
-		struct dvbh_params	dvbh;
-		struct atsc_params	atsc;
-
-		__u8			pad[128];
-	} delsys;
-};
-#define DVBFE_SET_PARAMS		_IOW('o', 83, struct dvbfe_params)
-#define DVBFE_GET_PARAMS		_IOWR('o', 84, struct dvbfe_params)
-
-/* DVB-S capability bitfields		*/
-struct dvbfe_dvbs_info {
-	enum dvbfe_modulation		modulation;
-	enum dvbfe_fec			fec;
-};
-
-/* DSS capability bitfields		*/
-struct dvbfe_dss_info {
-	enum dvbfe_modulation		modulation;
-	enum dvbfe_fec			fec;
-};
-
-/* DVB-S2 capability bitfields		*/
-struct dvbfe_dvbs2_info {
-	enum dvbfe_modulation		modulation;
-	enum dvbfe_fec			fec;
-
-	__u8				pad[32];
-};
-
-/* DVB-C capability bitfields		*/
-struct dvbfe_dvbc_info {
-	enum dvbfe_modulation		modulation;
-};
-
-/* DVB-T capability bitfields		*/
-struct dvbfe_dvbt_info {
-	enum dvbfe_modulation		modulation;
-	enum dvbfe_stream_priority	stream_priority;
-
-	__u8				pad[32];
-};
-
-/* DVB-H capability bitfields		*/
-struct dvbfe_dvbh_info {
-	enum dvbfe_modulation		modulation;
-	enum dvbfe_stream_priority	stream_priority;
-
-	__u8				pad[32];
-};
-
-/* ATSC capability bitfields		*/
-struct dvbfe_atsc_info {
-	enum dvbfe_modulation		modulation;
-
-	__u8				pad[32];
-};
-
-/* DVB Frontend related Information	*/
-struct dvbfe_info {
-	char				name[128];
-
-	union {
-		struct dvbfe_dvbs_info	dvbs;
-		struct dvbfe_dss_info	dss;
-		struct dvbfe_dvbs2_info	dvbs2;
-		struct dvbfe_dvbc_info	dvbc;
-		struct dvbfe_dvbt_info	dvbt;
-		struct dvbfe_dvbh_info	dvbh;
-		struct dvbfe_atsc_info	atsc;
-
-		__u8			pad[128];
-	} delsys;
-
-	__u32				frequency_min;
-	__u32				frequency_max;
-	__u32				frequency_step;
-	__u32				frequency_tolerance;
-	__u32				symbol_rate_min;
-	__u32				symbol_rate_max;
-	__u32				symbol_rate_tolerance;
-
-	enum fe_spectral_inversion	inversion;
-
-	__u8				pad[128];
-};
-#define DVBFE_GET_INFO			_IOR('o', 85, struct dvbfe_info)
-
-enum dvbfe_status {
-	DVBFE_HAS_SIGNAL		= (1 <<  0),	/*  something above noise floor	*/
-	DVBFE_HAS_CARRIER		= (1 <<  1),	/*  Signal found		*/
-	DVBFE_HAS_VITERBI		= (1 <<  2),	/*  FEC is stable		*/
-	DVBFE_HAS_SYNC			= (1 <<  3),	/*  SYNC found			*/
-	DVBFE_HAS_LOCK			= (1 <<  4),	/*  OK ..			*/
-	DVBFE_TIMEDOUT			= (1 <<  5),	/*  no lock in last ~2 s	*/
-	DVBFE_STATUS_DUMMY		= (1 << 31)
-};
-
-/* DVB Frontend events			*/
-struct dvbfe_events {
-	enum dvbfe_status		status;
-
-	__u8				pad[32];
-};
-
-struct dvb_frontend_event {
-	fe_status_t status;
-	struct dvb_frontend_parameters parameters;
-};
 #define FE_GET_EVENT		   _IOR('o', 78, struct dvb_frontend_event)
 
-struct dvbfe_event {
-	struct dvbfe_events fe_events;
-	struct dvbfe_params fe_params;
-};
-#define DVBFE_GET_EVENT			_IOR('o', 86, struct dvbfe_event)
+#define FE_DISHNETWORK_SEND_LEGACY_CMD _IO('o', 80) /* unsigned int */
 
 #endif /*_DVBFRONTEND_H_*/

@@ -24,6 +24,8 @@
 #ifndef _DVBOSD_H_
 #define _DVBOSD_H_
 
+
+
 typedef enum {
   // All functions return -2 on "not open"
   OSD_Close=1,    // ()
