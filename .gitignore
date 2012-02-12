@@ -2,3 +2,4 @@
 /gen
 /assets
 /obj
+/libs/*/gdb*
