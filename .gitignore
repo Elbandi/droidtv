@@ -3,3 +3,4 @@
 /assets
 /obj
 /libs/*/gdb*
+/res-src/w_scan-*
