@@ -4,10 +4,10 @@
 # Make sure you have ANDROID_NDK defined in .bashrc or .bash_profile
 
 API=8
-SRC_DIR="`pwd`/mumudvb-1.7"
-TARGET_FILE="`pwd`/../res/raw/mumudvb-1.7.bin"
+SRC_DIR="`pwd`/mumudvb"
+TARGET_FILE="`pwd`/../res/raw/mumudvb-1.6.1b.bin"
 INSTALL_DIR="`pwd`/../bin"
-INCLUDE_DIR="`pwd`/../jni/include"
+INCLUDE_DIR="`pwd`/include"
 
 cd $SRC_DIR
 
@@ -21,6 +21,9 @@ export STRIP="arm-linux-androideabi-strip"
 
 mkdir -p $INSTALL_DIR
 ./configure --host=arm-eabi --prefix=$INSTALL_DIR LIBS="-lc -lgcc" CFLAGS="-I$INCLUDE_DIR"
+
+echo "#undef malloc" >> src/config.h
+echo "#undef realloc" >> src/config.h
 
 make
 make install

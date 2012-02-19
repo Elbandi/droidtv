@@ -7,7 +7,7 @@ API=8
 SRC_DIR="`pwd`/w_scan-20110329"
 TARGET_FILE="`pwd`/../res/raw/wscan_20110329.bin"
 INSTALL_DIR="`pwd`/../bin"
-INCLUDE_DIR="`pwd`/../jni/include"
+INCLUDE_DIR="`pwd`/include"
 
 cd $SRC_DIR
 
