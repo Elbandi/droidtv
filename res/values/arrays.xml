@@ -18,9 +18,9 @@
  ***************************************************************************-->
 <resources>
     <string-array name="prefvalues_dvbType">
-        <item>atsc</item>
-        <!-- <item>dvbc</item>
-        <item>dvbs</item> -->
-        <item>dvbt</item>
+        <item>ATSC</item>
+        <!-- <item>DVBC</item> -->
+        <!-- <item>DVBS</item> -->
+        <item>DVBT</item>
     </string-array>
 </resources>

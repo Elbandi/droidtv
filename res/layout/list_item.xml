@@ -1,4 +1,5 @@
-/******************************************************************************
+<?xml version="1.0" encoding="utf-8"?>
+<!--***************************************************************************
  *  DroidTV, live TV on Android devices with host USB port and a DVB tuner    *
  *  Copyright (C) 2012  Christian Ulrich <chrulri@gmail.com>                  *
  *                                                                            *
@@ -14,26 +15,10 @@
  *                                                                            *
  *  You should have received a copy of the GNU General Public License         *
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.     *
- ******************************************************************************/
-package com.chrulri.droidtv;
-
-import java.io.File;
-
-class DvbTuner {
-	static final String TAG = LiveActivity.TAG + ".DvbTuner";
-
-	static final int TYPE_ATSC = 0x1;
-	static final int TYPE_DVBC = 0x2;
-	static final int TYPE_DVBS = 0x3;
-	static final int TYPE_DVBT = 0x4;
-
-	public boolean start(int dvbType, File channelsFile, String channelName) {
-		// TODO Auto-generated method stub
-		return false;
-	}
-
-	public void stop() {
-		// TODO Auto-generated method stub
-	}
-
-}
+ ***************************************************************************-->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:padding="10dp"
+    android:textSize="16sp" >
+</TextView>

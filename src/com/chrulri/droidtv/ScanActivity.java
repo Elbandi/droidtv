@@ -26,10 +26,6 @@ import java.io.Reader;
 import java.util.Date;
 import java.util.Locale;
 
-import com.chrulri.droidtv.Utils.Prefs;
-import com.chrulri.droidtv.Utils.ProcessUtils;
-import com.chrulri.droidtv.Utils.StringUtils;
-
 import android.app.Activity;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -46,6 +42,11 @@ import android.widget.ScrollView;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.chrulri.droidtv.StreamService.DvbType;
+import com.chrulri.droidtv.Utils.Prefs;
+import com.chrulri.droidtv.Utils.ProcessUtils;
+import com.chrulri.droidtv.Utils.StringUtils;
 
 public class ScanActivity extends Activity implements OnClickListener,
 		OnLongClickListener {
@@ -221,7 +222,7 @@ public class ScanActivity extends Activity implements OnClickListener,
 				break;
 			}
 		}
-		_isAtsc = Prefs.getDvbType(this) == DvbTuner.TYPE_ATSC;
+		_isAtsc = Prefs.getDvbType(this) == DvbType.ATSC;
 		findViewById(R.id.scan_atscTypeRow).setVisibility(
 				_isAtsc ? View.VISIBLE : View.GONE);
 		_atscTypeList.setSelection(2);
@@ -277,8 +278,9 @@ public class ScanActivity extends Activity implements OnClickListener,
 			_textView.setText(null);
 			// dvbType
 			_type = (String) Utils.decode(Prefs.getDvbType(ScanActivity.this),
-					DvbTuner.TYPE_ATSC, "a", DvbTuner.TYPE_DVBC, "c", DvbTuner.TYPE_DVBS,
-					"s", DvbTuner.TYPE_DVBT, "t");
+					DvbType.ATSC, "a",
+					//DvbType.DVBC, "c", DvbType.DVBS, "s",
+					DvbType.DVBT, "t");
 			// country
 			int countryIdx = _countryList.getSelectedItemPosition();
 			if (countryIdx == AdapterView.INVALID_POSITION) {

@@ -31,9 +31,12 @@ import java.io.Writer;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import com.chrulri.droidtv.StreamService.DvbType;
+
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 import android.util.AndroidRuntimeException;
@@ -207,9 +210,9 @@ class Utils {
 		/***
 		 * @return read dvbType from preferences or return default ({@link DvbTuner.TYPE_DVBT})
 		 */
-		public static int getDvbType(Context ctx) {
+		public static DvbType getDvbType(Context ctx) {
 			String dvbType = get(ctx).getString(KEY_DVBTYPE, null);
-			return parseDvbType(ctx, dvbType);
+			return Enum.valueOf(DvbType.class, dvbType);
 		}
 	}
 
@@ -237,16 +240,8 @@ class Utils {
 		return ProcessUtils.run(bin.toString(), args);
 	}
 
-	public static int parseDvbType(Context ctx, String dvbType) {
-		if ("atsc".equals(dvbType))
-			return DvbTuner.TYPE_ATSC;
-		if ("dvbt".equals(dvbType))
-			return DvbTuner.TYPE_DVBT;
-		return DvbTuner.TYPE_DVBT;
-	}
-
 	public static File getConfigsDir(Context ctx) {
-		return ctx.getDir("configs", 0);
+		return ctx.getDir("configs", Context.MODE_PRIVATE);
 	}
 
 	public static File getConfigsFile(Context ctx, String fileName) {
@@ -322,5 +317,10 @@ class Utils {
 				dlg.show();
 			}
 		});
+	}
+
+	public static void openSettings(Context context) {
+		Intent settingsActivity = new Intent(context, PreferencesActivity.class);
+		context.startActivity(settingsActivity);
 	}
 }

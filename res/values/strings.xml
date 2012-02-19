@@ -41,8 +41,8 @@
     </string-array>
     <string name="preftitle_channelConfigs">Channel Configurations</string>
     <string name="preferences_name">Preferences</string>
-    <string name="live_name">TV</string>
-    <string name="scan_name">DVB scan</string>
+    <string name="channels_name">Channels</string>
+    <string name="scan_name">Channel scanning</string>
     <string name="preftitle_scanChannels">Scan for channels</string>
 	<string name="scan">Scan for channels</string>
 	<string name="country">Country</string>
