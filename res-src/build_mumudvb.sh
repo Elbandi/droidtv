@@ -5,7 +5,7 @@
 
 API=8
 SRC_DIR="`pwd`/mumudvb"
-TARGET_FILE="`pwd`/../res/raw/mumudvb-1.6.1b.bin"
+TARGET_FILE="`pwd`/../res/raw/mumudvb_1.6.1b.bin"
 INSTALL_DIR="`pwd`/../bin"
 INCLUDE_DIR="`pwd`/include"
 
