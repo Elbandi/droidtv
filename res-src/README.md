@@ -19,7 +19,7 @@ the compiled w_scan binary will then be copied to /res/raw/
 
 ## BUILD MUMUDVB ##
 ```linux shell
-$ tar xf mumudvb-1.7.tgz
+$ tar xf mumudvb-1.6.1b.tgz
 $ patch -p1 -d mumudvb < mumudvb.patch
 $ ./build_mumudvb.sh
 ```
