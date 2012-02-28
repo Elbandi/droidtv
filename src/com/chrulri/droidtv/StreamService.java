@@ -158,7 +158,7 @@ public class StreamService extends Service {
 					Log.e(TAG, "mumudvb failed (" + exitCode + ")");
 					Log.d(TAG, ProcessUtils.readStdOut(mumudvb));
 					Log.d(TAG, ProcessUtils.readErrOut(mumudvb));
-					sendError("wscan failed (" + exitCode + ")");
+					sendError("mumudvb failed (" + exitCode + ")");
 				}
 			} catch (Throwable t) {
 				Log.e(TAG, "mumudvb", t);
