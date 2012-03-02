@@ -30,7 +30,27 @@ LICENSE
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
  ******************************************************************************
 
+HOW DOES IT WORK?
+=================
+DroidTV uses basic linux functionality as Android runs on top of a linux kernel. So the prerequirements are:
+
+* kernel modules for your dvb device are loaded and working
+* dvb device has the firmware loaded and is in 'warm state'
+* dvb device nodes in /dev/dvb/... are set with the correct permissions (e.g. at least 666)
+
+These prerequirements given the app itself does not need any superuser privileges.
+
+Then DroidTV uses [w_scan][5] to scan for channels on all frequencies.
+This has to be done everytime you're moving to a new broadcasting area (e.g. moving to another country).
+
+Once you've scanned for the channels the channel list will be stored on your Android device and you can
+simply switch between those channel lists and tune your favored channel.
+DroidTV then calls the [DVB API][6] of the linux kernel and streams the audio and video stream via it's
+own basic HTTP server to the media player rendering engine on your Android device.
+
 [1]: http://code.google.com/p/archos-gen8-dvb/
 [2]: https://market.android.com/details?id=com.chrulri.droidtv
 [3]: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=chrulri@gmail.com&item_name=droidtv
 [4]: http://en.wikipedia.org/wiki/Digital_Video_Broadcasting
+[5]: http://wirbel.htpc-forum.de/w_scan/index_en.html
+[6]: http://www.linuxtv.org/docs/dvbapi/dvbapi.html
