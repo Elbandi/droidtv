@@ -5,7 +5,7 @@
 
 API=8
 SRC_DIR="`pwd`/mumudvb"
-TARGET_FILE="`pwd`/../res/raw/mumudvb_1_6_1b.bin"
+TARGET_FILE="`pwd`/../res/raw/mumudvb_1_7.bin"
 INSTALL_DIR="`pwd`/../bin"
 INCLUDE_DIR="`pwd`/include"
 
@@ -24,6 +24,9 @@ mkdir -p $INSTALL_DIR
 
 echo "#undef malloc" >> src/config.h
 echo "#undef realloc" >> src/config.h
+echo "#define HAVE_LIBPTHREAD 1" >> src/config.h
+echo "#include <pthread.h>" >> src/config.h
+echo "#define pthread_timedjoin_np(a,b,c) pthread_join(a,b)" >> src/config.h
 
 make
 make install
