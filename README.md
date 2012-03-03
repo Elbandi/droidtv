@@ -45,7 +45,7 @@ This has to be done everytime you're moving to a new broadcasting area (e.g. mov
 
 Once you've scanned for the channels the channel list will be stored on your Android device and you can
 simply switch between those channel lists and tune your favored channel.
-DroidTV then calls the [DVB API][6] of the linux kernel and streams the audio and video stream via it's
+DroidTV then starts [MuMuDVB][6] - an open source DVB IPTV streaming software - which streams all the media streams via it's
 own basic HTTP server to the media player rendering engine on your Android device.
 
 [1]: http://code.google.com/p/archos-gen8-dvb/
@@ -53,4 +53,4 @@ own basic HTTP server to the media player rendering engine on your Android devic
 [3]: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=chrulri@gmail.com&item_name=droidtv
 [4]: http://en.wikipedia.org/wiki/Digital_Video_Broadcasting
 [5]: http://wirbel.htpc-forum.de/w_scan/index_en.html
-[6]: http://www.linuxtv.org/docs/dvbapi/dvbapi.html
+[6]: http://mumudvb.braice.net
