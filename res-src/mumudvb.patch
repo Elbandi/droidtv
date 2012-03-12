@@ -20,3 +20,26 @@
  /** the table for crc32 claculations */
  extern uint32_t       crc32_table[256];
  
+--- mumudvb.orig/src/mumudvb.h	2012-03-03 18:53:00.882029145 +0100
++++ mumudvb/src/mumudvb.h	2012-03-03 18:53:48.017437243 +0100
+@@ -96,15 +96,15 @@
+ 
+ #define DEFAULT_PATH_LEN 256
+ /**The path for the auto generated config file*/
+-#define GEN_CONF_PATH "/var/run/mumudvb/mumudvb_generated_conf_card%d_tuner%d"
++#define GEN_CONF_PATH "mumudvb_generated_conf_card%d_tuner%d"
+ /**The path for the list of streamed channels*/
+-#define STREAMED_LIST_PATH "/var/run/mumudvb/channels_streamed_adapter%d_tuner%d"
++#define STREAMED_LIST_PATH "channels_streamed_adapter%d_tuner%d"
+ /**The path for the list of *not* streamed channels*/
+-#define NOT_STREAMED_LIST_PATH "/var/run/mumudvb/channels_unstreamed_adapter%d_tuner%d"
++#define NOT_STREAMED_LIST_PATH "channels_unstreamed_adapter%d_tuner%d"
+ /**The path for the cam_info*/
+-#define CAM_INFO_LIST_PATH "/var/run/mumudvb/caminfo_adapter%d_tuner%d"
++#define CAM_INFO_LIST_PATH "caminfo_adapter%d_tuner%d"
+ /** The path for the pid file */
+-#define PIDFILE_PATH "/var/run/mumudvb/mumudvb_adapter%card_tuner%tuner.pid"
++#define PIDFILE_PATH "mumudvb_adapter%card_tuner%tuner.pid"
+ 
+ /**RTP header length*/
+ #define RTP_HEADER_LEN 12
