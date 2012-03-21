@@ -1,5 +1,5 @@
 #!/bin/sh
-# droidtv/res-srv/build_mumudvb.sh
+# droidtv/res-src/build_dvblast.sh
 # Compiles DVBlast for Android
 # Make sure you have ANDROID_NDK defined in .bashrc or .bash_profile
 
