@@ -1,5 +1,5 @@
 #!/bin/sh
-# droidtv/res-srv/build_wscan.sh
+# droidtv/res-src/build_wscan.sh
 # Compiles w_scan for Android
 # Make sure you have ANDROID_NDK defined in .bashrc or .bash_profile
 
