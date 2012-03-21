@@ -45,12 +45,11 @@ This has to be done everytime you're moving to a new broadcasting area (e.g. mov
 
 Once you've scanned for the channels the channel list will be stored on your Android device and you can
 simply switch between those channel lists and tune your favored channel.
-DroidTV then starts [MuMuDVB][6] - an open source DVB IPTV streaming software - which streams all the media streams via it's
-own basic HTTP server to the media player rendering engine on your Android device.
+DroidTV then starts [DVBlast][6] - an open source, simple and powerful MPEG-2/TS demux and streaming application - which streams all the media streams via UDP back to droidtv which in turn streams it via HTTP to the media player rendering engine on your Android device.
 
 [1]: http://code.google.com/p/archos-gen8-dvb/
 [2]: https://market.android.com/details?id=com.chrulri.droidtv
 [3]: https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=chrulri@gmail.com&item_name=droidtv
 [4]: http://en.wikipedia.org/wiki/Digital_Video_Broadcasting
 [5]: http://wirbel.htpc-forum.de/w_scan/index_en.html
-[6]: http://mumudvb.braice.net
+[6]: http://www.videolan.org/projects/dvblast.html

@@ -1,5 +1,5 @@
-HOWTO BUILD W_SCAN
-==================
+HOWTO BUILD BINARIES
+====================
 
 * ENTER THIS DIRECTORY...
 
