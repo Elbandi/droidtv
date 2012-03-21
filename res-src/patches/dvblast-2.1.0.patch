@@ -1,0 +1,142 @@
+diff -ruN dvblast-2.1.0.orig/android.c dvblast-2.1.0/android.c
+--- dvblast-2.1.0.orig/android.c	1970-01-01 01:00:00.000000000 +0100
++++ dvblast-2.1.0/android.c	2012-03-18 02:53:01.174680376 +0100
+@@ -0,0 +1,21 @@
++#include "android.h"
++
++time_t
++timegm(struct tm *tm)
++{
++    time_t ret;
++    char *tz;
++
++   tz = getenv("TZ");
++    setenv("TZ", "", 1);
++    tzset();
++    ret = mktime(tm);
++    if (tz)
++        setenv("TZ", tz, 1);
++    else
++        unsetenv("TZ");
++    tzset();
++    return ret;
++}
++
++
+diff -ruN dvblast-2.1.0.orig/android.h dvblast-2.1.0/android.h
+--- dvblast-2.1.0.orig/android.h	1970-01-01 01:00:00.000000000 +0100
++++ dvblast-2.1.0/android.h	2012-03-18 03:02:44.851343319 +0100
+@@ -0,0 +1,11 @@
++#include <time.h>
++#include <stdlib.h>
++
++/// time.h ///
++extern time_t timegm (struct tm *__tp);
++
++/// un.h ///
++/* Evaluate to actual length of the `sockaddr_un' structure.  */
++# define SUN_LEN(ptr) ((size_t) (((struct sockaddr_un *) 0)->sun_path)	      \
++		      + strlen ((ptr)->sun_path))
++
+diff -ruN dvblast-2.1.0.orig/comm.c dvblast-2.1.0/comm.c
+--- dvblast-2.1.0.orig/comm.c	2012-03-18 01:35:52.220875154 +0100
++++ dvblast-2.1.0/comm.c	2012-03-18 02:47:18.234992721 +0100
+@@ -29,6 +29,7 @@
+ #include "dvblast.h"
+ #include "en50221.h"
+ #include "comm.h"
++#include "android.h"
+ 
+ /*****************************************************************************
+  * Local declarations
+diff -ruN dvblast-2.1.0.orig/demux.c dvblast-2.1.0/demux.c
+--- dvblast-2.1.0.orig/demux.c	2012-03-18 01:35:52.216875215 +0100
++++ dvblast-2.1.0/demux.c	2012-03-18 02:54:43.045400420 +0100
+@@ -33,6 +33,7 @@
+ #include <netinet/in.h>
+ #include <arpa/inet.h>
+ 
++#include "android.h"
+ #include "dvblast.h"
+ #include "en50221.h"
+ 
+diff -ruN dvblast-2.1.0.orig/dvblast.c dvblast-2.1.0/dvblast.c
+--- dvblast-2.1.0.orig/dvblast.c	2012-03-18 01:35:52.216875215 +0100
++++ dvblast-2.1.0/dvblast.c	2012-03-18 02:55:08.389081259 +0100
+@@ -38,6 +38,7 @@
+ #include <getopt.h>
+ #include <errno.h>
+ 
++#include "android.h"
+ #include "dvblast.h"
+ #include "version.h"
+ 
+diff -ruN dvblast-2.1.0.orig/dvblastctl.c dvblast-2.1.0/dvblastctl.c
+--- dvblast-2.1.0.orig/dvblastctl.c	2012-03-18 01:35:52.216875215 +0100
++++ dvblast-2.1.0/dvblastctl.c	2012-03-18 03:00:11.813268134 +0100
+@@ -38,6 +38,8 @@
+ #include <errno.h>
+ #include <getopt.h>
+ 
++#include "android.h"
++
+ #include <bitstream/mpeg/psi.h>
+ #include <bitstream/dvb/si.h>
+ #include <bitstream/dvb/si_print.h>
+diff -ruN dvblast-2.1.0.orig/dvblast.h dvblast-2.1.0/dvblast.h
+--- dvblast-2.1.0.orig/dvblast.h	2012-03-18 01:35:52.216875215 +0100
++++ dvblast-2.1.0/dvblast.h	2012-03-18 02:54:17.669721165 +0100
+@@ -25,7 +25,7 @@
+ #include <sys/socket.h>
+ 
+ #define HAVE_CLOCK_NANOSLEEP
+-#define HAVE_ICONV
++//#define HAVE_ICONV
+ 
+ #define DEFAULT_PORT 3001
+ #define TS_SIZE 188
+diff -ruN dvblast-2.1.0.orig/en50221.c dvblast-2.1.0/en50221.c
+--- dvblast-2.1.0.orig/en50221.c	2012-03-18 01:35:52.216875215 +0100
++++ dvblast-2.1.0/en50221.c	2012-03-18 02:54:05.941867150 +0100
+@@ -46,6 +46,8 @@
+ #include <linux/dvb/frontend.h>
+ #include <linux/dvb/ca.h>
+ 
++#include "android.h"
++
+ #include <bitstream/mpeg/psi.h>
+ #include <bitstream/dvb/ci.h>
+ #include <bitstream/dvb/si.h>
+diff -ruN dvblast-2.1.0.orig/Makefile dvblast-2.1.0/Makefile
+--- dvblast-2.1.0.orig/Makefile	2012-03-18 01:35:52.216875215 +0100
++++ dvblast-2.1.0/Makefile	2012-03-18 02:48:27.178129473 +0100
+@@ -12,11 +12,9 @@
+ else
+ CFLAGS += -DVERSION_EXTRA=\"release\"
+ endif
+-LDLIBS += -lrt
+-LDLIBS_DVBLAST += -lpthread
+ 
+-OBJ_DVBLAST = dvblast.o util.o dvb.o udp.o asi.o demux.o output.o en50221.o comm.o mrtg-cnt.o
+-OBJ_DVBLASTCTL = util.o dvblastctl.o
++OBJ_DVBLAST = dvblast.o util.o dvb.o udp.o asi.o demux.o output.o en50221.o comm.o mrtg-cnt.o android.o
++OBJ_DVBLASTCTL = util.o dvblastctl.o android.o
+ 
+ ifndef V
+ Q = @
+diff -ruN dvblast-2.1.0.orig/udp.c dvblast-2.1.0/udp.c
+--- dvblast-2.1.0.orig/udp.c	2012-03-18 01:35:52.220875154 +0100
++++ dvblast-2.1.0/udp.c	2012-03-18 02:36:41.726994920 +0100
+@@ -188,9 +188,9 @@
+                 struct sockaddr_in *p_src =
+                     (struct sockaddr_in *)&p_connect_ai->ai_addr;
+                 struct ip_mreq_source imr;
+-                imr.imr_multiaddr = p_addr->sin_addr;
+-                imr.imr_interface.s_addr = i_if_addr;
+-                imr.imr_sourceaddr = p_src->sin_addr;
++                imr.imr_multiaddr = p_addr->sin_addr.s_addr;
++                imr.imr_interface = i_if_addr;
++                imr.imr_sourceaddr = p_src->sin_addr.s_addr;
+                 if ( i_if_index )
+                     msg_Warn( NULL, "ignoring ifindex option in SSM" );
+ 

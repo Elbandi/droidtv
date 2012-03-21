@@ -6,7 +6,8 @@ HOWTO BUILD W_SCAN
 ## DOWNLOAD SOURCES ##
 ```bash
 $ wget "http://wirbel.htpc-forum.de/w_scan/w_scan-20110329.tar.bz2"
-$ wget "http://gitweb.braice.net/gitweb?p=mumudvb;a=snapshot;h=ee9615c9c8cbcb3523e4f8d9d688b1c2354a0e0a;sf=tgz" -O mumudvb-1.7.tgz
+$ wget "http://download.videolan.org/pub/videolan/bitstream/1.0/bitstream-1.0.tar.bz2"
+$ wget "http://downloads.videolan.org/pub/videolan/dvblast/2.1/dvblast-2.1.0.tar.bz2"
 ```
 
 ## BUILD W_SCAN ##
@@ -17,11 +18,12 @@ $ ./build_wscan.sh
 the compiled w_scan binary will then be copied to /res/raw/
 
 
-## BUILD MUMUDVB ##
+## BUILD DVBLAST ##
 ```bash
-$ tar xf mumudvb-1.7.tgz
-$ patch -p1 -d mumudvb < mumudvb.patch
-$ ./build_mumudvb.sh
+$ tar xf bitstream-1.0.tar.bz2
+$ tar xf dvblast-2.1.0.tar.bz2
+$ patch -p1 -d dvblast-2.1.0 < patches/dvblast-2.1.0.patch
+$ ./build_dvblast.sh
 ```
-the compiled mumudvb binary will then be copied to /res/raw/
+the compiled dvblast binaries will then be copied to /res/raw/
 

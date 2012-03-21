@@ -34,162 +34,187 @@ import android.util.Log;
 
 import com.chrulri.droidtv.Utils.ProcessUtils;
 
+/**
+ * MuMuDVB wrapper service <br/>
+ * <br/>
+ * {@link http://mumudvb.braice.net/mumudvb/doc/mumudvb-1.7/README.html}
+ * {@link http://mumudvb.braice.net/mumudvb/doc/mumudvb-1.7/README_CONF.html}
+ */
 public class StreamService extends Service {
-	private static final String TAG = StreamService.class.getSimpleName();
+  private static final String TAG = StreamService.class.getSimpleName();
 
-	public static final String EXTRA_CHANNELCONFIG = "channelconfig";
+  static final int MUMUDVB = R.raw.mumudvb_1_7;
 
-	public enum DvbType {
-		ATSC, DVBT,
-	}
+  public static final String EXTRA_CHANNELCONFIG = "channelconfig";
 
-	static final String MUMUDVB_IP = "0.0.0.0";//"127.0.0.1";
-	static final int MUMUDVB_PORT = 1234;
-	static final Uri MUMUDVB_URI = Uri.parse("http://" + MUMUDVB_IP + ":"
-			+ MUMUDVB_PORT + "/");
+  public enum DvbType {
+    ATSC, DVBT,
+  }
 
-	static final String[] MUMUDVB_CONFIG_HEADER = { "autoconfiguration=0",
-			"unicast=1", "multicast=0", "ip_http=" + MUMUDVB_IP,
-			"port_http=" + MUMUDVB_PORT, "sap=0", "timeout_no_diff=0",
-			"check_status=1", "log_type=console", "tuning_timeout=10", };
+  static final String MUMUDVB_IP = "0.0.0.0";// "127.0.0.1";
+  static final int MUMUDVB_PORT = 4242;
+  static final String MUMUDVB_CONFIG_FILENAME = "mumudvb.conf";
+  static final String[] MUMUDVB_CONFIG_HEADER = {
+      "autoconfiguration=full",
+      "unicast=1",
+      "multicast=0",
+      "ip_http=" + MUMUDVB_IP,
+      "port_http=" + MUMUDVB_PORT,
+      "sap=0",
+      "timeout_no_diff=0",
+      "check_status=1",
+      "log_type=console",
+      //"tuning_timeout=10",
+  };
 
-	private AsyncStreamTask asyncTask;
+  public static Uri getServiceUri(int serviceId) {
+    return Uri.parse(String.format("http://localhost:%i/bysid/%i",
+        MUMUDVB_PORT, serviceId));
+  }
 
-	@Override
-	public void onStart(Intent intent, int startId) {
-		Log.d(TAG, "onStart");
-		super.onStart(intent, startId);
-		Bundle bundle = intent.getExtras();
-		String channelConfig = bundle.getString(EXTRA_CHANNELCONFIG);
-		DvbType dvbType = DvbType.DVBT;
-		try {
-			startMuMuDvb(dvbType, channelConfig);
-		} catch (IOException e) {
-			Log.e(TAG, "startMuMuDvb failed", e);
-			sendError(e);
-			stopSelf();
-		}
-	}
+  private AsyncStreamTask asyncTask;
 
-	@Override
-	public void onDestroy() {
-		Log.d(TAG, "onDestory");
-		super.onDestroy();
-	}
+  @Override
+  public void onStart(Intent intent, int startId) {
+    Log.d(TAG, "onStart");
+    super.onStart(intent, startId);
+    Bundle bundle = intent.getExtras();
+    String channelConfig = bundle.getString(EXTRA_CHANNELCONFIG);
+    DvbType dvbType = DvbType.DVBT;
+    try {
+      startMuMuDvb(dvbType, channelConfig);
+    } catch (IOException e) {
+      Log.e(TAG, "startMuMuDvb failed", e);
+      sendError(e);
+      stopSelf();
+    }
+  }
 
-	@Override
-	public IBinder onBind(Intent intent) {
-		return null;
-	}
+  @Override
+  public void onDestroy() {
+    Log.d(TAG, "onDestroy");
+    asyncTask.cancel(false);
+    super.onDestroy();
+  }
 
-	private void startMuMuDvb(DvbType dvbType, String channelConfig)
-			throws IOException {
-		Log.d(TAG, "startMuMuDvb(" + channelConfig + ")");
-		File configFile = new File(getCacheDir(), "mumudvb.conf");
-		PrintWriter writer = new PrintWriter(configFile);
-		for (String headerLine : MUMUDVB_CONFIG_HEADER) {
-			writer.println(headerLine);
-		}
-		switch (dvbType) {
-		case ATSC:
-			DvbUtils.parseATSC(channelConfig, writer);
-			break;
-		case DVBT:
-			DvbUtils.parseDVBT(channelConfig, writer);
-			break;
-		}
-		writer.close();
-		runMuMuDvb(configFile);
-	}
+  @Override
+  public IBinder onBind(Intent intent) {
+    return null;
+  }
 
-	private void runMuMuDvb(File configFile) throws IOException {
-		Log.d(TAG, "runMuMuDvb(" + configFile + ")");
+  private void startMuMuDvb(DvbType dvbType, String channelConfig)
+      throws IOException {
+    Log.d(TAG, "startMuMuDvb(" + channelConfig + ")");
+    File configFile = new File(getCacheDir(), MUMUDVB_CONFIG_FILENAME);
+    PrintWriter writer = new PrintWriter(configFile);
+    for (String headerLine : MUMUDVB_CONFIG_HEADER) {
+      writer.println(headerLine);
+    }
+    int sid;
+    switch (dvbType) {
+    case ATSC:
+    case DVBT:
+      sid = DvbUtils.parse(channelConfig, writer);
+      break;
+    default:
+      Log.wtf(TAG, "unknown dvbType[" + dvbType + "]");
+      return;
+    }
+    writer.close();
+    runMuMuDvb(configFile, sid);
+  }
 
-		asyncTask = new AsyncStreamTask();
-		asyncTask.execute(configFile);
-	}
+  private void runMuMuDvb(File configFile, int sid) throws IOException {
+    Log.d(TAG, "runMuMuDvb(" + configFile + "," + sid + ")");
 
-	class AsyncStreamTask extends AsyncTask<File, CharSequence, Void> {
+    asyncTask = new AsyncStreamTask();
+    asyncTask.execute(configFile);
+  }
 
-		@Override
-		protected void onCancelled() {
-			sendUpdates(null);
-			stopSelf();
-		}
+  class AsyncStreamTask extends AsyncTask<File, CharSequence, Void> {
 
-		@Override
-		protected void onProgressUpdate(CharSequence... values) {
-			if (isCancelled())
-				return;
-			sendUpdates(values);
-		}
+    @Override
+    protected void onCancelled() {
+      sendUpdates(null);
+      stopSelf();
+    }
 
-		@Override
-		protected void onPostExecute(Void result) {
-			sendUpdates(null);
-			stopSelf();
-		}
+    @Override
+    protected void onProgressUpdate(CharSequence... values) {
+      if (isCancelled())
+        return;
+      sendUpdates(values);
+    }
 
-		@Override
-		protected Void doInBackground(File... params) {
-			File configFile = params[0];
-			try {
-				Process mumudvb = Utils.runBinary(StreamService.this,
-						R.raw.mumudvb_1_6_1b, "-d", "-s", "-t", "-vvvvvv",
-						"-c", configFile.toString());
-				Reader input = new InputStreamReader(mumudvb.getErrorStream());
-				BufferedReader reader = new BufferedReader(input);
-				Integer exitCode = null;
-				String line;
-				while (!isCancelled()
-						&& ((line = reader.readLine()) != null || (exitCode = ProcessUtils
-								.checkExitCode(mumudvb)) == null)) {
-					if (line == null) {
-						Thread.sleep(250);
-					} else {
-						Log.d(TAG, "AsyncStreamTask: " + line);
-						publishProgress(line);
-					}
-				}
-				if (exitCode == null) {
-					mumudvb.destroy();
-				} else if (exitCode != 0) {
-					// TODO localization
-					Log.e(TAG, "mumudvb failed (" + exitCode + ")");
-					Log.d(TAG, ProcessUtils.readStdOut(mumudvb));
-					Log.d(TAG, ProcessUtils.readErrOut(mumudvb));
-					sendError("mumudvb failed (" + exitCode + ")");
-				}
-			} catch (Throwable t) {
-				Log.e(TAG, "mumudvb", t);
-				sendError("wscan", t);
-			}
-			return null;
-		}
-	}
+    @Override
+    protected void onPostExecute(Void result) {
+      sendUpdates(null);
+      stopSelf();
+    }
 
-	private void sendError(String message) {
-		Intent intent = new Intent(ChannelsActivity.ACTION_ERROR);
-		intent.putExtra(ChannelsActivity.EXTRA_ERRORMSG, message);
-		sendBroadcast(intent);
-	}
+    @Override
+    protected Void doInBackground(File... params) {
+      File configFile = params[0];
+      try {
+        Process mumudvb = Utils.runBinary(StreamService.this, MUMUDVB, "-d",
+            "-s", "-t", "-c", configFile.toString()
+        // , "-vvvvvvvvv"
+            );
+        Reader input = new InputStreamReader(mumudvb.getErrorStream());
+        BufferedReader reader = new BufferedReader(input);
+        Integer exitCode = null;
+        String line;
+        while (!isCancelled() && ((line = reader.readLine()) != null || (exitCode = ProcessUtils
+            .checkExitCode(mumudvb)) == null)) {
+          if (line == null) {
+            Thread.sleep(250);
+          } else {
+            Log.d(TAG, "AsyncStreamTask: " + line);
+            publishProgress(line);
+          }
+        }
+        if (exitCode == null) {
+          mumudvb.destroy();
+          Log.d(TAG, "mumudvb destroying");
+          mumudvb.waitFor();
+          Log.d(TAG, "mumudvb destroyed");
+        } else if (exitCode != 0) {
+          // TODO localization
+          Log.e(TAG, "mumudvb failed (" + exitCode + ")");
+          Log.d(TAG, ProcessUtils.readStdOut(mumudvb));
+          Log.d(TAG, ProcessUtils.readErrOut(mumudvb));
+          sendError("mumudvb failed (" + exitCode + ")");
+        }
+      } catch (Throwable t) {
+        Log.e(TAG, "mumudvb", t);
+        sendError("wscan", t);
+      }
+      return null;
+    }
+  }
 
-	private void sendError(String message, Throwable t) {
-		Intent intent = new Intent(ChannelsActivity.ACTION_ERROR);
-		intent.putExtra(ChannelsActivity.EXTRA_ERRORMSG, message);
-		intent.putExtra(ChannelsActivity.EXTRA_ERROR, t);
-		sendBroadcast(intent);
-	}
+  private void sendError(String message) {
+    Intent intent = new Intent(ChannelsActivity.ACTION_ERROR);
+    intent.putExtra(ChannelsActivity.EXTRA_ERRORMSG, message);
+    sendBroadcast(intent);
+  }
 
-	private void sendError(Throwable t) {
-		Intent intent = new Intent(ChannelsActivity.ACTION_ERROR);
-		intent.putExtra(ChannelsActivity.EXTRA_ERROR, t);
-		sendBroadcast(intent);
-	}
+  private void sendError(String message, Throwable t) {
+    Intent intent = new Intent(ChannelsActivity.ACTION_ERROR);
+    intent.putExtra(ChannelsActivity.EXTRA_ERRORMSG, message);
+    intent.putExtra(ChannelsActivity.EXTRA_ERROR, t);
+    sendBroadcast(intent);
+  }
 
-	private void sendUpdates(CharSequence[] values) {
-		Intent intent = new Intent(ChannelsActivity.ACTION_UPDATE);
-		intent.putExtra(ChannelsActivity.EXTRA_UPDATES, values);
-		sendBroadcast(intent);
-	}
+  private void sendError(Throwable t) {
+    Intent intent = new Intent(ChannelsActivity.ACTION_ERROR);
+    intent.putExtra(ChannelsActivity.EXTRA_ERROR, t);
+    sendBroadcast(intent);
+  }
+
+  private void sendUpdates(CharSequence[] values) {
+    Intent intent = new Intent(ChannelsActivity.ACTION_UPDATE);
+    intent.putExtra(ChannelsActivity.EXTRA_UPDATES, values);
+    sendBroadcast(intent);
+  }
 }

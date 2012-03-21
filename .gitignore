@@ -4,5 +4,5 @@
 /obj
 /libs/*/gdb*
 /res-src/w_scan-*
-/res-src/mumudvb
-/res-src/mumudvb-*
+/res-src/bitstream-*
+/res-src/dvblast-*
