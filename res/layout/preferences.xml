@@ -20,7 +20,6 @@
   xmlns:android="http://schemas.android.com/apk/res/android">
     <PreferenceCategory android:title="@string/preftitle_general">
         <CheckBoxPreference android:key="playLastChannelOnStartup" android:title="@string/preftitle_playLastChannelOnStartup" android:defaultValue="true"></CheckBoxPreference>
-        <ListPreference android:key="dvbType" android:title="@string/preftitle_dvbType" android:entryValues="@array/prefvalues_dvbType" android:entries="@array/preftitles_dvbType" android:defaultValue="dvbt"></ListPreference>
         <ListPreference android:key="channelConfigs" android:title="@string/preftitle_channelConfigs"></ListPreference>
         <Preference android:key="scanChannels" android:title="@string/preftitle_scanChannels"></Preference>
     </PreferenceCategory>

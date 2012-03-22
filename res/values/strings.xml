@@ -17,9 +17,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.     *
  ***************************************************************************-->
 <resources>
-    <string name="app_name">Live TV</string>
+    <string name="app_name">Droid TV</string>
     <string name="ok">Ok</string>
-	<string name="version">0.8 RC</string>
+	<string name="version">0.1.0</string>
 	<string name="quit">Quit</string>
 	<string name="channels">Channels</string>
     <string name="settings">Settings</string>
@@ -47,6 +47,10 @@
 	<string name="scan">Scan for channels</string>
 	<string name="country">Country</string>
     <string name="atscType">ATSC type</string>
-	<string name="report">Report</string>
+	<string name="report">OK</string>
 	<string name="fileName">File name</string>
+	<string name="check_device">Checking for DVB device access…</string>
+	<string name="no_device">Sorry, no device found or device acces denied.
+This application *NEEDS* a working DVB device, plugged into your Android device and set up with drivers, firmware and correct permissions.
+Make sure that these prerequirements are met and try again.</string>
 </resources>
