@@ -23,6 +23,7 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.util.AndroidRuntimeException;
 import android.util.Log;
@@ -37,6 +38,8 @@ import com.chrulri.droidtv.StreamService.DvbType;
 
 import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -57,18 +60,12 @@ class Utils {
 
     public static final String NEWLINE = System.getProperty("line.separator");
 
-    private static Method METHOD_FileUtils_copyFile;
-    private static Method METHOD_FileUtils_copyToFile;
     private static Method METHOD_FileUtils_setPermissions;
 
     static {
         try {
             Class<?> clazz;
             clazz = Class.forName("android.os.FileUtils");
-            METHOD_FileUtils_copyFile = clazz.getMethod("copyFile", File.class,
-                    File.class);
-            METHOD_FileUtils_copyToFile = clazz.getMethod("copyToFile",
-                    InputStream.class, File.class);
             METHOD_FileUtils_setPermissions = clazz.getMethod("setPermissions",
                     String.class, int.class, int.class, int.class);
         } catch (Exception e) {
@@ -117,14 +114,34 @@ class Utils {
         public static final int S_IWOTH = 00002;
         public static final int S_IXOTH = 00001;
 
-        public static boolean copyFile(File srcFile, File destFile) {
-            return (Boolean) invoke(METHOD_FileUtils_copyFile, null, srcFile,
-                    destFile);
-        }
-
+        /**
+         * Copy data from a source stream to destFile. Return true if succeed,
+         * return false if failed.
+         */
         public static boolean copyToFile(InputStream inputStream, File destFile) {
-            return (Boolean) invoke(METHOD_FileUtils_copyToFile, null, inputStream,
-                    destFile);
+            try {
+                // if (destFile.exists()) {
+                // destFile.delete();
+                // }
+                FileOutputStream out = new FileOutputStream(destFile);
+                try {
+                    byte[] buffer = new byte[4096];
+                    int bytesRead;
+                    while ((bytesRead = inputStream.read(buffer)) >= 0) {
+                        out.write(buffer, 0, bytesRead);
+                    }
+                } finally {
+                    out.flush();
+                    try {
+                        out.getFD().sync();
+                    } catch (IOException e) {
+                    }
+                    out.close();
+                }
+                return true;
+            } catch (IOException e) {
+                return false;
+            }
         }
 
         public static int setPermissions(String file, int mode) {
@@ -208,9 +225,79 @@ class Utils {
                 Field fid = proc.getClass().getDeclaredField("id");
                 fid.setAccessible(true);
                 int pid = (Integer) fid.get(proc);
-                run("kill", "" + pid);
+                terminate(pid);
             } catch (Throwable t) {
                 Log.wtf(TAG, "terminate", t);
+            }
+        }
+
+        public static void terminate(int pid) {
+            try {
+                Log.d(TAG, "terminate(" + pid + ")");
+                run("kill", "" + pid);
+                while (checkPid(pid)) {
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e) {
+                        // nop
+                    }
+                }
+            } catch (Throwable t) {
+                Log.wtf(TAG, "terminate", t);
+            }
+        }
+
+        public static boolean checkPid(int pid) {
+            return new File("/proc", "" + pid).exists();
+        }
+
+        public static void finishTask(AsyncTask<?, ?, ?> task, boolean cancel) {
+            if (task == null) {
+                return;
+            }
+            // cancel task and wait for it to finish
+            task.cancel(cancel);
+            while (task.getStatus() != AsyncTask.Status.FINISHED) {
+                try {
+                    Thread.sleep(100);
+                } catch (Throwable t) {
+                    // nop
+                }
+            }
+        }
+
+        private static File getBinaryExecutableFile(Context ctx, int rawId) {
+            return new File(ctx.getCacheDir(), Integer.toHexString(rawId) + ".bin");
+        }
+
+        public static Process runBinary(Context ctx, int rawId, String... args)
+                throws IOException {
+            File bin = getBinaryExecutableFile(ctx, rawId);
+            if (!FileUtils.copyToFile(ctx.getResources().openRawResource(rawId), bin))
+                throw new IOException("copying file failed");
+            if (FileUtils.setPermissions(bin.toString(), FileUtils.S_IRWXU) != 0)
+                throw new IOException("setting permission failed");
+            return ProcessUtils.run(bin.toString(), ctx.getCacheDir(), args);
+        }
+
+        public static void killBinary(Context ctx, int rawId) throws IOException {
+            File exe = getBinaryExecutableFile(ctx, rawId);
+            File[] procs = new File("/proc").listFiles(new FilenameFilter() {
+                @Override
+                public boolean accept(File dir, String filename) {
+                    try {
+                        Integer.parseInt(filename);
+                        return true;
+                    } catch (NumberFormatException e) {
+                        return false;
+                    }
+                }
+            });
+            for (File proc : procs) {
+                if (exe.getCanonicalPath().equals(new File(proc, "exe").getCanonicalPath())) {
+                    int pid = Integer.parseInt(proc.getName());
+                    terminate(pid);
+                }
             }
         }
     }
@@ -247,18 +334,6 @@ class Utils {
                 android.R.layout.simple_spinner_item, array);
         ad.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         return ad;
-    }
-
-    public static Process runBinary(Context ctx, int rawId, String... args)
-            throws IOException {
-        File cacheDir = ctx.getCacheDir();
-        File bin = new File(cacheDir, Integer.toHexString(rawId) + ".bin");
-        bin.deleteOnExit();
-        if (!FileUtils.copyToFile(ctx.getResources().openRawResource(rawId), bin))
-            throw new IOException("copying file failed");
-        if (FileUtils.setPermissions(bin.toString(), FileUtils.S_IRWXU) != 0)
-            throw new IOException("setting permission failed");
-        return ProcessUtils.run(bin.toString(), cacheDir, args);
     }
 
     public static File getConfigsDir(Context ctx) {
@@ -305,7 +380,8 @@ class Utils {
                 out.write(buf, 0, len);
             }
         } else {
-            for (int read = 0; (len = reader.read(buf, 0, Math.min(todo - read, buf.length))) != -1; read += len) {
+            for (int read = 0; todo > read
+                    && (len = reader.read(buf, 0, Math.min(todo - read, buf.length))) != -1; read += len) {
                 out.write(buf, 0, len);
             }
         }

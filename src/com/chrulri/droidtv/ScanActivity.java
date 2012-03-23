@@ -996,7 +996,7 @@ public class ScanActivity extends Activity implements OnClickListener,
         @Override
         protected String doInBackground(Void... params) {
             try {
-                Process wscan = Utils.runBinary(ScanActivity.this, WSCAN, "-f", _type,
+                Process wscan = ProcessUtils.runBinary(ScanActivity.this, WSCAN, "-f", _type,
                         "-c", _country, "-X");
                 Reader input = new InputStreamReader(wscan.getErrorStream());
                 BufferedReader reader = new BufferedReader(input);

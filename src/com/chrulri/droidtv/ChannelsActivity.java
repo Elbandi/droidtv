@@ -20,11 +20,15 @@ package com.chrulri.droidtv;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -36,6 +40,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.chrulri.droidtv.Utils.Prefs;
+import com.chrulri.droidtv.Utils.ProcessUtils;
 import com.chrulri.droidtv.Utils.StringUtils;
 
 import java.io.BufferedReader;
@@ -57,21 +62,61 @@ public class ChannelsActivity extends Activity {
     public static final String EXTRA_UPDATES = "updates";
     public static final String EXTRA_ERRORMSG = "errormsg";
 
-    private Spinner spinner;
-    private ListView listView;
-    private String[] channelConfigs;
-    private String[] channels;
+    private Spinner mSpinner;
+    private ListView mListView;
+    private String[] mChannelConfigs;
+    private String[] mChannels;
+    private AlertDialog mStreamingDialog;
+    private StreamService.LocalBinder mServiceBinder;
+    private final ServiceConnection mServiceConnection = new ServiceConnection() {
 
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            Log.d(TAG, "onServiceDisconnected(" + name + ")");
+            mServiceBinder = null;
+            stopStreaming();
+        }
+
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Log.d(TAG, "onServiceConnected(" + name + "," + service + ")");
+            mServiceBinder = (StreamService.LocalBinder) service;
+        }
+    };
+
+    // ************************************************************** //
+    // * ACTIVITY *************************************************** //
+    // ************************************************************** //
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         new CheckTask().execute();
     }
 
-    private void gotoChannelsScreen() {
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unbindStreamService();
+    }
+
+    private void onCreateImpl() {
         setContentView(R.layout.channels);
 
-        spinner = (Spinner) findViewById(R.id.spinner);
-        spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+        bindStreamService();
+
+        mStreamingDialog = new AlertDialog.Builder(this).setTitle(R.string.app_name)
+                // FIXME localization
+                .setMessage("streaming")
+                .setNegativeButton("Cancel", new OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        stopStreaming();
+                    }
+                }).create();
+
+        mSpinner = (Spinner) findViewById(R.id.spinner);
+        mSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view,
                     int position, long id) {
@@ -84,8 +129,8 @@ public class ChannelsActivity extends Activity {
             }
         });
 
-        listView = (ListView) findViewById(R.id.listView);
-        listView.setOnItemClickListener(new OnItemClickListener() {
+        mListView = (ListView) findViewById(R.id.listView);
+        mListView.setOnItemClickListener(new OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position,
                     long id) {
@@ -96,24 +141,86 @@ public class ChannelsActivity extends Activity {
         // start
         loadChannelLists();
         setChannelList(null);
-        if (spinner.getAdapter().getCount() == 0) {
+        if (mSpinner.getAdapter().getCount() == 0) {
             Utils.openSettings(this);
         }
     }
 
+    // ************************************************************** //
+    // * STREAMING SERVICE ****************************************** //
+    // ************************************************************** //
+
+    private void bindStreamService() {
+        bindService(new Intent(this, StreamService.class), mServiceConnection,
+                Context.BIND_AUTO_CREATE);
+    }
+
+    private void unbindStreamService() {
+        unbindService(mServiceConnection);
+    }
+
+    private void startStreaming(final String channelconfig) {
+        final StreamService svc = mServiceBinder.getService();
+        if (svc == null) {
+            Log.d(TAG, "startStreaming without service attached");
+            return;
+        }
+        String channelname = svc.startStream(channelconfig);
+        setupStreamingGui(channelname);
+    }
+
+    private void stopStreaming() {
+        final StreamService svc = mServiceBinder.getService();
+        if (svc != null) {
+            new AsyncTask<Void, Void, Void>() {
+                @Override
+                protected Void doInBackground(Void... params) {
+                    svc.stopStream();
+                    return null;
+                }
+
+                @Override
+                protected void onPostExecute(Void result) {
+                    cleanupStreamingGui();
+                };
+            }.execute();
+        }
+        else {
+            cleanupStreamingGui();
+        }
+    }
+
+    // ************************************************************** //
+    // * STREAMING GUI ********************************************** //
+    // ************************************************************** //
+
+    private void setupStreamingGui(String channelname) {
+        // TODO set up GUI
+        mStreamingDialog.show();
+    }
+
+    private void cleanupStreamingGui() {
+        // TODO clean up GUI
+        mStreamingDialog.dismiss();
+    }
+
+    // ************************************************************** //
+    // * CHANNEL UTILS ********************************************** //
+    // ************************************************************** //
+
     private void loadChannelLists() {
         // reset channel lists spinner
-        spinner.setAdapter(null);
-        listView.setAdapter(null);
+        mSpinner.setAdapter(null);
+        mListView.setAdapter(null);
 
         // load channel lists
         String[] configFiles = Utils.getConfigsDir(this).list();
-        spinner.setAdapter(Utils.createSimpleArrayAdapter(this, configFiles));
+        mSpinner.setAdapter(Utils.createSimpleArrayAdapter(this, configFiles));
     }
 
     private void loadChannels(String channelListName) {
         // reset channel list view
-        listView.setAdapter(null);
+        mListView.setAdapter(null);
 
         // check channel list
         File file = Utils.getConfigsFile(this, channelListName);
@@ -122,8 +229,8 @@ public class ChannelsActivity extends Activity {
         }
 
         // load channels
-        channelConfigs = null;
-        channels = null;
+        mChannelConfigs = null;
+        mChannels = null;
         try {
             List<String> channelConfigList = new ArrayList<String>();
             List<String> channelList = new ArrayList<String>();
@@ -134,16 +241,16 @@ public class ChannelsActivity extends Activity {
                 channelList.add(line.split(":")[0]);
             }
             reader.close();
-            channelConfigs = channelConfigList.toArray(new String[channelConfigList
+            mChannelConfigs = channelConfigList.toArray(new String[channelConfigList
                     .size()]);
-            channels = channelList.toArray(new String[channelList.size()]);
+            mChannels = channelList.toArray(new String[channelList.size()]);
         } catch (IOException e) {
             Utils.error(this, getText(R.string.error_invalid_channel_configuration), e);
         }
 
         // update channel list view
-        listView.setAdapter(new ArrayAdapter<String>(this, R.layout.list_item,
-                channels));
+        mListView.setAdapter(new ArrayAdapter<String>(this, R.layout.list_item,
+                mChannels));
     }
 
     /**
@@ -165,11 +272,11 @@ public class ChannelsActivity extends Activity {
         }
 
         if (channelList == null) {
-            spinner.setSelection(AdapterView.INVALID_POSITION);
+            mSpinner.setSelection(AdapterView.INVALID_POSITION);
         } else {
-            for (int i = 0; i < spinner.getAdapter().getCount(); i++) {
-                if (channelList.equals(spinner.getAdapter().getItem(i))) {
-                    spinner.setSelection(i);
+            for (int i = 0; i < mSpinner.getAdapter().getCount(); i++) {
+                if (channelList.equals(mSpinner.getAdapter().getItem(i))) {
+                    mSpinner.setSelection(i);
                     break;
                 }
             }
@@ -177,21 +284,14 @@ public class ChannelsActivity extends Activity {
     }
 
     private void watchChannel(int channelId) {
-        Log.d(TAG, "watchChannel(" + channelId + "): " + channels[channelId]);
-        String channelConfig = channelConfigs[channelId];
-        Intent intent = new Intent(this, StreamService.class);
-        intent.putExtra(StreamService.EXTRA_CHANNELCONFIG, channelConfig);
-        startService(intent);
-        AlertDialog dlg = new AlertDialog.Builder(this).setTitle(R.string.app_name)
-                .setMessage("streaming")
-                .setNegativeButton("Cancel", new OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        stopService(new Intent(ChannelsActivity.this, StreamService.class));
-                    }
-                }).create();
-        dlg.show();
+        Log.d(TAG, "watchChannel(" + channelId + "): " + mChannels[channelId]);
+        String channelconfig = mChannelConfigs[channelId];
+        startStreaming(channelconfig);
     }
+
+    // ************************************************************** //
+    // * INITIALIZATION TASK **************************************** //
+    // ************************************************************** //
 
     private class CheckTask extends AsyncTask<Void, Integer, Integer> {
 
@@ -227,6 +327,12 @@ public class ChannelsActivity extends Activity {
 
         @Override
         protected Integer doInBackground(Void... params) {
+            // kill old instance if still running
+            try {
+                ProcessUtils.killBinary(getApplicationContext(), StreamService.DVBLAST);
+            } catch (IOException e) {
+                Log.w(TAG, "kill dvblast", e);
+            }
             // check for device access
             publishProgress(CHECK_DEVICE);
             if (!checkDevice())
@@ -250,7 +356,7 @@ public class ChannelsActivity extends Activity {
         @Override
         protected void onPostExecute(Integer result) {
             if (result == OK) {
-                gotoChannelsScreen();
+                onCreateImpl();
             } else {
                 // show alert and abort application
                 Utils.error(ChannelsActivity.this, getText(result), new View.OnClickListener() {
