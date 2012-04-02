@@ -34,7 +34,7 @@ import android.widget.BaseAdapter;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.chrulri.droidtv.StreamService.DvbType;
+import com.chrulri.droidtv.StreamActivity.DvbType;
 
 import java.io.DataOutputStream;
 import java.io.File;

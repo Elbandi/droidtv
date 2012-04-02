@@ -19,16 +19,9 @@
 package com.chrulri.droidtv;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
@@ -52,37 +45,11 @@ import java.util.List;
 
 public class ChannelsActivity extends Activity {
     private static final String TAG = ChannelsActivity.class.getSimpleName();
-    private static final String PKG = ChannelsActivity.class.getPackage()
-            .getName();
-
-    public static final String ACTION_ERROR = PKG + ".ACTION_ERROR";
-    public static final String ACTION_UPDATE = PKG + ".ACTION_UPDATE";
-
-    public static final String EXTRA_ERROR = "error";
-    public static final String EXTRA_UPDATES = "updates";
-    public static final String EXTRA_ERRORMSG = "errormsg";
 
     private Spinner mSpinner;
     private ListView mListView;
     private String[] mChannelConfigs;
     private String[] mChannels;
-    private AlertDialog mStreamingDialog;
-    private StreamService.LocalBinder mServiceBinder;
-    private final ServiceConnection mServiceConnection = new ServiceConnection() {
-
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            Log.d(TAG, "onServiceDisconnected(" + name + ")");
-            mServiceBinder = null;
-            stopStreaming();
-        }
-
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            Log.d(TAG, "onServiceConnected(" + name + "," + service + ")");
-            mServiceBinder = (StreamService.LocalBinder) service;
-        }
-    };
 
     // ************************************************************** //
     // * ACTIVITY *************************************************** //
@@ -90,30 +57,21 @@ public class ChannelsActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(TAG, ">>> onCreate");
         super.onCreate(savedInstanceState);
         new CheckTask().execute();
+        Log.d(TAG, "<<< onCreate");
     }
 
     @Override
     protected void onDestroy() {
+        Log.d(TAG, ">>> onDestroy");
         super.onDestroy();
-        unbindStreamService();
+        Log.d(TAG, "<<< onDestroy");
     }
 
     private void onCreateImpl() {
         setContentView(R.layout.channels);
-
-        bindStreamService();
-
-        mStreamingDialog = new AlertDialog.Builder(this).setTitle(R.string.app_name)
-                // FIXME localization
-                .setMessage("streaming")
-                .setNegativeButton("Cancel", new OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        stopStreaming();
-                    }
-                }).create();
 
         mSpinner = (Spinner) findViewById(R.id.spinner);
         mSpinner.setOnItemSelectedListener(new OnItemSelectedListener() {
@@ -144,64 +102,6 @@ public class ChannelsActivity extends Activity {
         if (mSpinner.getAdapter().getCount() == 0) {
             Utils.openSettings(this);
         }
-    }
-
-    // ************************************************************** //
-    // * STREAMING SERVICE ****************************************** //
-    // ************************************************************** //
-
-    private void bindStreamService() {
-        bindService(new Intent(this, StreamService.class), mServiceConnection,
-                Context.BIND_AUTO_CREATE);
-    }
-
-    private void unbindStreamService() {
-        unbindService(mServiceConnection);
-    }
-
-    private void startStreaming(final String channelconfig) {
-        final StreamService svc = mServiceBinder.getService();
-        if (svc == null) {
-            Log.d(TAG, "startStreaming without service attached");
-            return;
-        }
-        String channelname = svc.startStream(channelconfig);
-        setupStreamingGui(channelname);
-    }
-
-    private void stopStreaming() {
-        final StreamService svc = mServiceBinder.getService();
-        if (svc != null) {
-            new AsyncTask<Void, Void, Void>() {
-                @Override
-                protected Void doInBackground(Void... params) {
-                    svc.stopStream();
-                    return null;
-                }
-
-                @Override
-                protected void onPostExecute(Void result) {
-                    cleanupStreamingGui();
-                };
-            }.execute();
-        }
-        else {
-            cleanupStreamingGui();
-        }
-    }
-
-    // ************************************************************** //
-    // * STREAMING GUI ********************************************** //
-    // ************************************************************** //
-
-    private void setupStreamingGui(String channelname) {
-        // TODO set up GUI
-        mStreamingDialog.show();
-    }
-
-    private void cleanupStreamingGui() {
-        // TODO clean up GUI
-        mStreamingDialog.dismiss();
     }
 
     // ************************************************************** //
@@ -286,7 +186,9 @@ public class ChannelsActivity extends Activity {
     private void watchChannel(int channelId) {
         Log.d(TAG, "watchChannel(" + channelId + "): " + mChannels[channelId]);
         String channelconfig = mChannelConfigs[channelId];
-        startStreaming(channelconfig);
+        Intent intent = new Intent(this, StreamActivity.class);
+        intent.putExtra(StreamActivity.EXTRA_CHANNELCONFIG, channelconfig);
+        startActivity(intent);
     }
 
     // ************************************************************** //
@@ -329,7 +231,7 @@ public class ChannelsActivity extends Activity {
         protected Integer doInBackground(Void... params) {
             // kill old instance if still running
             try {
-                ProcessUtils.killBinary(getApplicationContext(), StreamService.DVBLAST);
+                ProcessUtils.killBinary(getApplicationContext(), StreamActivity.DVBLAST);
             } catch (IOException e) {
                 Log.w(TAG, "kill dvblast", e);
             }

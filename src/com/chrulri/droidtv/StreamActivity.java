@@ -20,13 +20,12 @@ package com.chrulri.droidtv;
 
 import static com.chrulri.droidtv.Utils.NEWLINE;
 
-import android.app.Service;
-import android.content.Intent;
-import android.net.Uri;
+import android.app.Activity;
+import android.media.MediaPlayer;
 import android.os.AsyncTask;
-import android.os.Binder;
-import android.os.IBinder;
+import android.os.Bundle;
 import android.util.Log;
+import android.widget.VideoView;
 
 import com.chrulri.droidtv.Utils.ProcessUtils;
 
@@ -57,20 +56,15 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 /**
- * DVBlast wrapper service <br/>
+ * DVBlast wrapper activity <br/>
  * <br/>
  * README: {@link http://git.videolan.org/?p=dvblast.git;a=blob;f=README;h=
  * cda01aa2e0cf0999478a7dcb1d60305e5c8a7a7f
  * ;hb=350557c669ce3670b7ea1e252b11f261c0610239}
  */
-public class StreamService extends Service {
-    public class LocalBinder extends Binder {
-        public StreamService getService() {
-            return StreamService.this;
-        }
-    }
+public class StreamActivity extends Activity {
 
-    private static final String TAG = StreamService.class.getSimpleName();
+    private static final String TAG = StreamActivity.class.getSimpleName();
 
     static final int DVBLAST = R.raw.dvblast_2_1_0;
     static final int DVBLASTCTL = R.raw.dvblastctl_2_1_0;
@@ -106,14 +100,14 @@ public class StreamService extends Service {
     static final String UDP_IP = "127.0.0.1";
     static final int UDP_PORT = 1555;
 
-    static final String HTTP_IP = "0.0.0.0";// "127.0.0.1";
+    static final String HTTP_IP = "127.0.0.1";
     static final int HTTP_PORT = 1666;
     static final String HTTP_HEADER = "HTTP/1.1 200 OK" + NEWLINE +
             "Content-Type: video/mp2t" + NEWLINE +
             "Connection: keep-alive" + NEWLINE + NEWLINE;
 
-    public static final Uri SERVICE_URI = Uri.parse(String.format("http://127.0.0.1:%d/tv.ts",
-            HTTP_PORT));
+    public static final String SERVICE_URL = String.format("http://127.0.0.1:%d/tv.ts",
+            HTTP_PORT);
 
     /**
      * ip:port 1 serviceid
@@ -123,52 +117,72 @@ public class StreamService extends Service {
     static final String DVBLAST_SOCKET = "droidtv.socket";
     static final int DVBLAST_CHECKDELAY = 2500;
 
+    private String mChannelConfig;
     private AsyncDvblastTask mDvblastTask;
     private AsyncDvblastCtlTask mDvblastCtlTask;
     private AsyncStreamTask mStreamTask;
     private DatagramSocket mUdpSocket;
     private ServerSocket mHttpSocket;
+    private VideoView mVideoView;
 
     @Override
-    public void onCreate() {
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
         Log.d(TAG, "onCreate");
+        setContentView(R.layout.stream);
+        mChannelConfig = getIntent().getStringExtra(EXTRA_CHANNELCONFIG);
+        mVideoView = (VideoView) findViewById(R.id.stream_video);
+        mVideoView.setVideoPath(SERVICE_URL);
+        mVideoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+            @Override
+            public void onPrepared(MediaPlayer mp) {
+                Log.d(TAG, "onPrepared(" + mp + ")");
+            }
+        });
+        mVideoView.setOnErrorListener(new MediaPlayer.OnErrorListener() {
+            @Override
+            public boolean onError(MediaPlayer mp, int what, int extra) {
+                Log.d(TAG, "onError(" + mp + "," + what + "," + extra);
+                return true;
+            }
+        });
+        mVideoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mp) {
+                Log.d(TAG, "onCompletion(" + mp + ")");
+            }
+        });
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        String name = startStream(mChannelConfig);
+        if (name == null) {
+            finish();
+            return;
+        }
+        startPlayback(name);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        stopPlayback();
+        stopStream();
     }
 
     @Override
     public void onDestroy() {
         Log.d(TAG, "onDestroy");
-        stopStream();
+        super.onDestroy();
     }
 
-    @Override
-    public IBinder onBind(Intent intent) {
-        return new LocalBinder();
-    }
-
-    @Override
-    public boolean onUnbind(Intent intent) {
-        return false;
-    }
-
-    public void stopStream() {
-        Log.d(TAG, ">>> stopStream");
-        ProcessUtils.finishTask(mDvblastCtlTask, false);
-        ProcessUtils.finishTask(mStreamTask, true);
-        ProcessUtils.finishTask(mDvblastTask, true);
-        if (mUdpSocket != null) {
-            mUdpSocket.close();
-        }
-        if (mHttpSocket != null) {
-            try {
-                mHttpSocket.close();
-            } catch (IOException e) {
-                // nop
-            }
-        }
-        Log.d(TAG, "<<< stopStream");
-    }
-
-    public String startStream(String channelconfig) {
+    /**
+     * @param channelconfig
+     * @return channel name
+     */
+    private String startStream(String channelconfig) {
         try {
             Log.d(TAG, ">>> startStream(" + channelconfig + ")");
             try {
@@ -204,8 +218,7 @@ public class StreamService extends Service {
                 return name;
             } catch (IOException e) {
                 Log.e(TAG, "starting stream failed", e);
-                sendError(e);
-                stopStream();
+                Utils.error(this, "failed to start streaming", e);
                 return null;
             }
         } finally {
@@ -213,19 +226,40 @@ public class StreamService extends Service {
         }
     }
 
+    private void stopStream() {
+        Log.d(TAG, ">>> stopStream");
+        ProcessUtils.finishTask(mDvblastCtlTask, false);
+        ProcessUtils.finishTask(mStreamTask, true);
+        ProcessUtils.finishTask(mDvblastTask, true);
+        if (mUdpSocket != null) {
+            mUdpSocket.close();
+        }
+        if (mHttpSocket != null) {
+            try {
+                mHttpSocket.close();
+            } catch (IOException e) {
+                // nop
+            }
+        }
+        Log.d(TAG, "<<< stopStream");
+    }
+
+    public void updateStatus(FrontendStatus status) {
+        Log.d(TAG, "fe_status: " + status);
+    }
+
+    private void startPlayback(String name) {
+        mVideoView.start();
+    }
+
+    private void stopPlayback() {
+        if (mVideoView.isPlaying())
+            mVideoView.stopPlayback();
+    }
+
     class AsyncStreamTask extends AsyncTask<Void, Void, Void> {
 
-        final String TAG = StreamService.TAG + "." + AsyncStreamTask.class.getSimpleName();
-
-        @Override
-        protected void onCancelled() {
-            sendUpdates(null);
-        }
-
-        @Override
-        protected void onPostExecute(Void result) {
-            sendUpdates(null);
-        }
+        final String TAG = StreamActivity.TAG + "." + AsyncStreamTask.class.getSimpleName();
 
         @Override
         protected Void doInBackground(Void... params) {
@@ -266,12 +300,12 @@ public class StreamService extends Service {
 
     class AsyncDvblastCtlTask extends AsyncTask<Void, FrontendStatus, Void> {
 
-        final String TAG = StreamService.TAG + "." + AsyncDvblastCtlTask.class.getSimpleName();
+        final String TAG = StreamActivity.TAG + "." + AsyncDvblastCtlTask.class.getSimpleName();
 
         @Override
         protected void onProgressUpdate(FrontendStatus... values) {
             FrontendStatus status = values[0];
-            Log.d(TAG, "fe_status: " + status);
+            updateStatus(status);
         }
 
         @Override
@@ -284,7 +318,7 @@ public class StreamService extends Service {
                     continue;
                 }
                 try {
-                    Process dvblastctl = ProcessUtils.runBinary(StreamService.this, DVBLASTCTL,
+                    Process dvblastctl = ProcessUtils.runBinary(StreamActivity.this, DVBLASTCTL,
                             "-r", DVBLAST_SOCKET, "-x", "xml", "fe_status");
                     int exitCode = dvblastctl.waitFor();
                     if (exitCode != 0) {
@@ -360,7 +394,7 @@ public class StreamService extends Service {
 
     class AsyncDvblastTask extends AsyncTask<Void, CharSequence, Void> {
 
-        final String TAG = StreamService.TAG + "." + AsyncDvblastTask.class.getSimpleName();
+        final String TAG = StreamActivity.TAG + "." + AsyncDvblastTask.class.getSimpleName();
 
         private File mConfigFile;
         private int mFreq;
@@ -371,30 +405,13 @@ public class StreamService extends Service {
         }
 
         @Override
-        protected void onCancelled() {
-            sendUpdates(null);
-        }
-
-        @Override
-        protected void onProgressUpdate(CharSequence... values) {
-            if (isCancelled())
-                return;
-            sendUpdates(values);
-        }
-
-        @Override
-        protected void onPostExecute(Void result) {
-            sendUpdates(null);
-        }
-
-        @Override
         protected Void doInBackground(Void... params) {
-            Log.d(TAG, ">>> AsyncDvblastTask");
+            Log.d(TAG, ">>>");
             try {
-                Process dvblast = ProcessUtils.runBinary(StreamService.this, DVBLAST,
-                        "-U", "-O", "5000", "-r", DVBLAST_SOCKET,
-                        "-x", "xml", "-c", mConfigFile.getAbsolutePath(),
-                        "-f", "" + mFreq, "-q");
+                Process dvblast = ProcessUtils.runBinary(StreamActivity.this, DVBLAST,
+                        "-U", "-a0", "-O5000", "-r", DVBLAST_SOCKET,
+                        "-xxml", "-c", mConfigFile.getAbsolutePath(),
+                        "-f" + mFreq, "-q");
                 Reader input = new InputStreamReader(dvblast.getInputStream());
                 BufferedReader reader = new BufferedReader(input);
                 Integer exitCode = null;
@@ -426,40 +443,13 @@ public class StreamService extends Service {
                     Log.e(TAG, "dvblast failed (" + exitCode + ")");
                     Log.d(TAG, ProcessUtils.readStdOut(dvblast));
                     Log.d(TAG, ProcessUtils.readErrOut(dvblast));
-                    sendError("dvblast failed (" + exitCode + ")");
                 }
             } catch (Throwable t) {
                 Log.e(TAG, "dvblast", t);
-                sendError("dvblast", t);
             }
-            Log.d(TAG, "<<< AsyncDvblastTask");
+            Log.d(TAG, "<<<");
             return null;
         }
-    }
-
-    private void sendError(String message) {
-        Intent intent = new Intent(ChannelsActivity.ACTION_ERROR);
-        intent.putExtra(ChannelsActivity.EXTRA_ERRORMSG, message);
-        sendBroadcast(intent);
-    }
-
-    private void sendError(String message, Throwable t) {
-        Intent intent = new Intent(ChannelsActivity.ACTION_ERROR);
-        intent.putExtra(ChannelsActivity.EXTRA_ERRORMSG, message);
-        intent.putExtra(ChannelsActivity.EXTRA_ERROR, t);
-        sendBroadcast(intent);
-    }
-
-    private void sendError(Throwable t) {
-        Intent intent = new Intent(ChannelsActivity.ACTION_ERROR);
-        intent.putExtra(ChannelsActivity.EXTRA_ERROR, t);
-        sendBroadcast(intent);
-    }
-
-    private void sendUpdates(CharSequence[] values) {
-        Intent intent = new Intent(ChannelsActivity.ACTION_UPDATE);
-        intent.putExtra(ChannelsActivity.EXTRA_UPDATES, values);
-        sendBroadcast(intent);
     }
 
     private static int tryParseInt(String str, String paramName)
