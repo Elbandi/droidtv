@@ -36,6 +36,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.chrulri.droidtv.StreamActivity.DvbType;
+import com.chrulri.droidtv.Utils.Prefs;
 import com.chrulri.droidtv.Utils.ProcessUtils;
 import com.chrulri.droidtv.Utils.StringUtils;
 
@@ -895,8 +896,7 @@ public class ScanActivity extends Activity implements OnClickListener,
             setEnabled(false);
             _textView.setText(null);
             // dvbType
-            _dvbType = DvbType.DVBT;
-            // FIXME _dvbType = Prefs.getDvbType(ScanActivity.this);
+            _dvbType = Prefs.getDvbType(ScanActivity.this);
             _type = (String) Utils.decode(_dvbType, DvbType.ATSC, "a",
                     DvbType.DVBC, "c",
                     DvbType.DVBS, "s",

@@ -35,18 +35,16 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
-import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.io.Reader;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
+import java.net.Inet4Address;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
@@ -63,7 +61,6 @@ import javax.xml.parsers.ParserConfigurationException;
  * ;hb=350557c669ce3670b7ea1e252b11f261c0610239}
  */
 public class StreamActivity extends Activity {
-
     private static final String TAG = StreamActivity.class.getSimpleName();
 
     static final int DVBLAST = R.raw.dvblast_2_1_0;
@@ -76,7 +73,6 @@ public class StreamActivity extends Activity {
     }
 
     public class FrontendStatus {
-
         public static final int HAS_SIGNAL = 0x001;
         public static final int HAS_CARRIER = 0x02;
         public static final int HAS_VITERBI = 0x04;
@@ -97,9 +93,14 @@ public class StreamActivity extends Activity {
         }
     }
 
+    static final String[] ENVP_TMPDIR = {
+            "TMPDIR=."
+    };
+
     static final String UDP_IP = "127.0.0.1";
     static final int UDP_PORT = 1555;
 
+    // static final String HTTP_IP = "0.0.0.0"; // debug
     static final String HTTP_IP = "127.0.0.1";
     static final int HTTP_PORT = 1666;
     static final String HTTP_HEADER = "HTTP/1.1 200 OK" + NEWLINE +
@@ -115,8 +116,11 @@ public class StreamActivity extends Activity {
     static final String DVBLAST_CONFIG_CONTENT = UDP_IP + ":" + UDP_PORT + " 1 %d";
     static final String DVBLAST_CONFIG_FILENAME = "dvblast.conf";
     static final String DVBLAST_SOCKET = "droidtv.socket";
-    static final int DVBLAST_CHECKDELAY = 2500;
+    static final String DVBLAST_LOG = "dvblast.log";
+    static final int DVBLAST_CHECKDELAY = 1000;
 
+    private FrontendStatus mFrontendStatus;
+    private String mChannelName;
     private String mChannelConfig;
     private AsyncDvblastTask mDvblastTask;
     private AsyncDvblastCtlTask mDvblastCtlTask;
@@ -132,7 +136,6 @@ public class StreamActivity extends Activity {
         setContentView(R.layout.stream);
         mChannelConfig = getIntent().getStringExtra(EXTRA_CHANNELCONFIG);
         mVideoView = (VideoView) findViewById(R.id.stream_video);
-        mVideoView.setVideoPath(SERVICE_URL);
         mVideoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
             @Override
             public void onPrepared(MediaPlayer mp) {
@@ -142,7 +145,8 @@ public class StreamActivity extends Activity {
         mVideoView.setOnErrorListener(new MediaPlayer.OnErrorListener() {
             @Override
             public boolean onError(MediaPlayer mp, int what, int extra) {
-                Log.d(TAG, "onError(" + mp + "," + what + "," + extra);
+                Log.d(TAG, "onError(" + mp + "," + what + "," + extra + ")");
+                finish(); // return to channel list
                 return true;
             }
         });
@@ -150,23 +154,28 @@ public class StreamActivity extends Activity {
             @Override
             public void onCompletion(MediaPlayer mp) {
                 Log.d(TAG, "onCompletion(" + mp + ")");
+                finish(); // return to channel list
             }
         });
     }
 
     @Override
     protected void onStart() {
+        Log.d(TAG, "onStart");
         super.onStart();
         String name = startStream(mChannelConfig);
         if (name == null) {
             finish();
             return;
         }
-        startPlayback(name);
+        mChannelName = name;
+        startPlayback();
+        updateTitle();
     }
 
     @Override
     protected void onStop() {
+        Log.d(TAG, "onStop");
         super.onStop();
         stopPlayback();
         stopStream();
@@ -186,8 +195,7 @@ public class StreamActivity extends Activity {
         try {
             Log.d(TAG, ">>> startStream(" + channelconfig + ")");
             try {
-                // watchdog socket file
-                new File(getCacheDir(), DVBLAST_SOCKET).delete();
+                removeSocketFile();
                 // config file
                 File configFile = new File(getCacheDir(), DVBLAST_CONFIG_FILENAME);
                 PrintWriter writer = new PrintWriter(configFile);
@@ -206,9 +214,9 @@ public class StreamActivity extends Activity {
                 writer.close();
                 // run dvblast
                 Log.d(TAG, "dvblast(" + configFile + "," + freq + ")");
-                mUdpSocket = new DatagramSocket(UDP_PORT, InetAddress.getByName(null));
-                mUdpSocket.setSoTimeout(100);
-                mHttpSocket = new ServerSocket(HTTP_PORT, 0/* FIXME */);
+                mUdpSocket = new DatagramSocket(UDP_PORT, Inet4Address.getByName(UDP_IP));
+                mUdpSocket.setSoTimeout(1000);
+                mHttpSocket = new ServerSocket(HTTP_PORT, 10, Inet4Address.getByName(HTTP_IP));
                 mStreamTask = new AsyncStreamTask();
                 mStreamTask.execute();
                 mDvblastTask = new AsyncDvblastTask(configFile, freq);
@@ -228,9 +236,6 @@ public class StreamActivity extends Activity {
 
     private void stopStream() {
         Log.d(TAG, ">>> stopStream");
-        ProcessUtils.finishTask(mDvblastCtlTask, false);
-        ProcessUtils.finishTask(mStreamTask, true);
-        ProcessUtils.finishTask(mDvblastTask, true);
         if (mUdpSocket != null) {
             mUdpSocket.close();
         }
@@ -241,20 +246,21 @@ public class StreamActivity extends Activity {
                 // nop
             }
         }
+        mDvblastCtlTask.cancel(false);
+        mStreamTask.cancel(true);
+        mDvblastTask.cancel(true);
         Log.d(TAG, "<<< stopStream");
     }
 
-    public void updateStatus(FrontendStatus status) {
-        Log.d(TAG, "fe_status: " + status);
-    }
-
-    private void startPlayback(String name) {
+    private void startPlayback() {
+        mVideoView.setVideoPath(SERVICE_URL);
         mVideoView.start();
     }
 
     private void stopPlayback() {
-        if (mVideoView.isPlaying())
+        if (mVideoView.isPlaying()) {
             mVideoView.stopPlayback();
+        }
     }
 
     class AsyncStreamTask extends AsyncTask<Void, Void, Void> {
@@ -284,7 +290,8 @@ public class StreamActivity extends Activity {
                             out.write(dataPacket.getData(), dataPacket.getOffset(),
                                     dataPacket.getLength());
                         } catch (InterruptedIOException e) {
-                            // nop
+                            Log.w(TAG, "udp timeout");
+                            continue;
                         } catch (SocketException e) {
                             break;
                         }
@@ -304,21 +311,23 @@ public class StreamActivity extends Activity {
 
         @Override
         protected void onProgressUpdate(FrontendStatus... values) {
-            FrontendStatus status = values[0];
-            updateStatus(status);
+            mFrontendStatus = values[0];
+            Log.d(TAG, "fe_status: " + mFrontendStatus);
+            updateTitle();
         }
 
         @Override
         protected Void doInBackground(Void... params) {
             Log.d(TAG, ">>> AsyncDvblastCtlTask");
+            try {
+                Thread.sleep(DVBLAST_CHECKDELAY);
+            } catch (InterruptedException e) {
+                // nop
+            }
             while (!isCancelled()) {
                 try {
-                    Thread.sleep(DVBLAST_CHECKDELAY);
-                } catch (InterruptedException e) {
-                    continue;
-                }
-                try {
                     Process dvblastctl = ProcessUtils.runBinary(StreamActivity.this, DVBLASTCTL,
+                            ENVP_TMPDIR,
                             "-r", DVBLAST_SOCKET, "-x", "xml", "fe_status");
                     int exitCode = dvblastctl.waitFor();
                     if (exitCode != 0) {
@@ -364,6 +373,12 @@ public class StreamActivity extends Activity {
                 } catch (Throwable t) {
                     Log.w(TAG, "dvblastctl", t);
                 }
+                // zZzZZZ..
+                try {
+                    Thread.sleep(DVBLAST_CHECKDELAY);
+                } catch (InterruptedException e) {
+                    continue;
+                }
             }
             Log.d(TAG, "<<< AsyncDvblastCtlTask");
             return null;
@@ -393,15 +408,22 @@ public class StreamActivity extends Activity {
     }
 
     class AsyncDvblastTask extends AsyncTask<Void, CharSequence, Void> {
-
         final String TAG = StreamActivity.TAG + "." + AsyncDvblastTask.class.getSimpleName();
 
+        private File mErrorLog;
+        private PrintWriter mErrorLogger;
         private File mConfigFile;
         private int mFreq;
 
         public AsyncDvblastTask(File configFile, int freq) {
             mConfigFile = configFile;
             mFreq = freq;
+            mErrorLog = new File(getCacheDir(), DVBLAST_LOG);
+            try {
+                mErrorLogger = new PrintWriter(mErrorLog);
+            } catch (FileNotFoundException e) {
+                Log.wtf(TAG, "error logger", e);
+            }
         }
 
         @Override
@@ -412,22 +434,26 @@ public class StreamActivity extends Activity {
                         "-U", "-a0", "-O5000", "-r", DVBLAST_SOCKET,
                         "-xxml", "-c", mConfigFile.getAbsolutePath(),
                         "-f" + mFreq, "-q");
-                Reader input = new InputStreamReader(dvblast.getInputStream());
-                BufferedReader reader = new BufferedReader(input);
                 Integer exitCode = null;
-                String line;
                 while (!isCancelled() &&
                         (exitCode = ProcessUtils.checkExitCode(dvblast)) == null) {
                     try {
-                        if (reader.ready()) {
-                            line = reader.readLine();
-                            if (line == null) {
-                                Thread.sleep(250);
-                            } else {
-                                Log.d(TAG, "#" + line);
-                                publishProgress(line);
-                            }
-                        } else {
+                        int read = 0;
+                        String str;
+                        // handle dvblast info
+                        str = Utils.readAll(dvblast.getInputStream());
+                        if (str.length() > 0) {
+                            read += str.length();
+                            // TODO parse DOM and handle
+                        }
+                        // read error log
+                        str = Utils.readAll(dvblast.getErrorStream());
+                        if (str.length() > 0) {
+                            read += str.length();
+                            mErrorLogger.write(str);
+                        }
+                        // zzZZzzz
+                        if (read == 0) {
                             Thread.sleep(250);
                         }
                     } catch (Throwable t) {
@@ -444,6 +470,7 @@ public class StreamActivity extends Activity {
                     Log.d(TAG, ProcessUtils.readStdOut(dvblast));
                     Log.d(TAG, ProcessUtils.readErrOut(dvblast));
                 }
+                removeSocketFile();
             } catch (Throwable t) {
                 Log.e(TAG, "dvblast", t);
             }
@@ -461,4 +488,21 @@ public class StreamActivity extends Activity {
                     "error while parsing " + paramName + " (" + str + ")");
         }
     }
+
+    private void updateTitle() {
+        String str = mChannelName;
+        if (mFrontendStatus != null) {
+            str += "  [Signal: " + mFrontendStatus.signal + ", Error: "
+                    + mFrontendStatus.ber + "]";
+        }
+        setTitle(str);
+    }
+
+    private void removeSocketFile() {
+        File f = new File(getCacheDir(), DVBLAST_SOCKET);
+        if (f.exists() && !f.delete()) {
+            Log.w(TAG, "unable to delete " + DVBLAST_SOCKET);
+        }
+    }
+
 }

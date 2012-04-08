@@ -44,7 +44,7 @@
             android:id="@+id/error_reportButton"
             android:layout_width="fill_parent"
             android:layout_height="50dp"
-            android:text="@string/report" />
+            android:text="@android:string/ok" />
     </LinearLayout>
 
 </LinearLayout>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--***************************************************************************
+<!--
+ ***************************************************************************
  *  DroidTV, live TV on Android devices with host USB port and a DVB tuner    *
  *  Copyright (C) 2012  Christian Ulrich <chrulri@gmail.com>                  *
  *                                                                            *
@@ -15,11 +16,22 @@
  *                                                                            *
  *  You should have received a copy of the GNU General Public License         *
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.     *
- ***************************************************************************-->
-<PreferenceScreen
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <PreferenceCategory android:title="@string/preftitle_general">
-        <CheckBoxPreference android:key="playLastChannelOnStartup" android:title="@string/preftitle_playLastChannelOnStartup" android:defaultValue="true"></CheckBoxPreference>
-        <Preference android:key="scanChannels" android:title="@string/preftitle_scanChannels"></Preference>
+ ***************************************************************************
+-->
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <PreferenceCategory android:title="@string/preftitle_general" >
+
+        <ListPreference
+            android:defaultValue="dvbt"
+            android:entries="@array/preftitles_dvbType"
+            android:entryValues="@array/prefvalues_dvbType"
+            android:key="dvbType"
+            android:title="@string/preftitle_dvbType" />
+
+        <Preference
+            android:key="scanChannels"
+            android:title="@string/preftitle_scanChannels" />
     </PreferenceCategory>
+
 </PreferenceScreen>

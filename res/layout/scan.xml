@@ -26,11 +26,6 @@
 			<Spinner android:prompt="@string/country" android:id="@+id/scan_countrySpinner"
 				android:drawSelectorOnTop="true" />
 		</TableRow>
-		<TableRow android:id="@+id/scan_atscTypeRow">
-			<TextView android:text="@string/atscType" android:padding="3dip" android:layout_gravity="center_vertical"/>
-			<Spinner android:prompt="@string/atscType" android:id="@+id/scan_atscTypeSpinner"
-				android:drawSelectorOnTop="true" />
-		</TableRow>
 		<TableRow>
 			<TextView android:text="@string/fileName" android:padding="3dip" android:layout_gravity="center_vertical"/>
 			<EditText android:id="@+id/scan_fileNameView" android:inputType="text"/>

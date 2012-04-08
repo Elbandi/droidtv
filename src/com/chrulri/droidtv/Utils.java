@@ -120,9 +120,6 @@ class Utils {
          */
         public static boolean copyToFile(InputStream inputStream, File destFile) {
             try {
-                // if (destFile.exists()) {
-                // destFile.delete();
-                // }
                 FileOutputStream out = new FileOutputStream(destFile);
                 try {
                     byte[] buffer = new byte[4096];
@@ -156,10 +153,10 @@ class Utils {
 
     public static class ProcessUtils {
         public static Process run(String executable, String... args) throws IOException {
-            return run(executable, null, args);
+            return run(executable, null, null, args);
         }
 
-        public static Process run(String executable, File workingDirectory,
+        public static Process run(String executable, File workingDirectory, String[] envp,
                 String... args) throws IOException {
             if (args.length > 0) {
                 String[] pargs = new String[args.length + 1];
@@ -168,7 +165,7 @@ class Utils {
                     pargs[i + 1] = args[i];
                 args = pargs;
             }
-            return Runtime.getRuntime().exec(args, null, workingDirectory);
+            return Runtime.getRuntime().exec(args, envp, workingDirectory);
         }
 
         public static Process runAsRoot(String... args) throws IOException {
@@ -222,7 +219,14 @@ class Utils {
 
         public static void terminate(Process proc) {
             try {
-                Field fid = proc.getClass().getDeclaredField("id");
+                Class<?> cls = proc.getClass();
+                Field fid;
+                try {
+                    fid = cls.getDeclaredField("id");
+                } catch (NoSuchFieldException e) {
+                    // ICS-compatible
+                    fid = cls.getDeclaredField("pid");
+                }
                 fid.setAccessible(true);
                 int pid = (Integer) fid.get(proc);
                 terminate(pid);
@@ -272,16 +276,23 @@ class Utils {
 
         public static Process runBinary(Context ctx, int rawId, String... args)
                 throws IOException {
+            return runBinary(ctx, rawId, null, args);
+        }
+
+        public static Process runBinary(Context ctx, int rawId, String[] envp, String... args)
+                throws IOException {
+            ProcessUtils.killBinary(ctx, rawId);
             File bin = getBinaryExecutableFile(ctx, rawId);
             if (!FileUtils.copyToFile(ctx.getResources().openRawResource(rawId), bin))
                 throw new IOException("copying file failed");
             if (FileUtils.setPermissions(bin.toString(), FileUtils.S_IRWXU) != 0)
                 throw new IOException("setting permission failed");
-            return ProcessUtils.run(bin.toString(), ctx.getCacheDir(), args);
+            return ProcessUtils.run(bin.toString(), ctx.getCacheDir(), envp, args);
         }
 
         public static void killBinary(Context ctx, int rawId) throws IOException {
             File exe = getBinaryExecutableFile(ctx, rawId);
+            String exePath = exe.getCanonicalPath();
             File[] procs = new File("/proc").listFiles(new FilenameFilter() {
                 @Override
                 public boolean accept(File dir, String filename) {
@@ -294,16 +305,18 @@ class Utils {
                 }
             });
             for (File proc : procs) {
-                if (exe.getCanonicalPath().equals(new File(proc, "exe").getCanonicalPath())) {
-                    int pid = Integer.parseInt(proc.getName());
-                    terminate(pid);
+                File pexe = new File(proc, "exe");
+                if (pexe.canRead()) {
+                    if (exePath.equals(pexe.getCanonicalPath())) {
+                        int pid = Integer.parseInt(proc.getName());
+                        terminate(pid);
+                    }
                 }
             }
         }
     }
 
     public static class Prefs {
-        public static final String KEY_PLAYLASTCHANNELONSTARTUP = "playLastChannelOnStartup";
         public static final String KEY_DVBTYPE = "dvbType";
         public static final String KEY_CHANNELCONFIGS = "channelConfigs";
         public static final String KEY_SCANCHANNELS = "scanChannels";
@@ -375,7 +388,9 @@ class Utils {
         int todo = in.available();
         Reader reader = new InputStreamReader(in);
         int len;
-        if (todo <= 0) {
+        if (todo == 0) {
+            // nop
+        } else if (todo < 0) {
             while ((len = reader.read(buf)) != -1) {
                 out.write(buf, 0, len);
             }

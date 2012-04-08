@@ -23,6 +23,7 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -102,6 +103,15 @@ public class ChannelsActivity extends Activity {
         if (mSpinner.getAdapter().getCount() == 0) {
             Utils.openSettings(this);
         }
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_MENU) {
+            Utils.openSettings(this);
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
     }
 
     // ************************************************************** //
@@ -232,8 +242,9 @@ public class ChannelsActivity extends Activity {
             // kill old instance if still running
             try {
                 ProcessUtils.killBinary(getApplicationContext(), StreamActivity.DVBLAST);
+                ProcessUtils.killBinary(getApplicationContext(), StreamActivity.DVBLASTCTL);
             } catch (IOException e) {
-                Log.w(TAG, "kill dvblast", e);
+                Log.w(TAG, "kill previous instances", e);
             }
             // check for device access
             publishProgress(CHECK_DEVICE);
