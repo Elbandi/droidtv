@@ -164,6 +164,8 @@ class Utils {
                 for (int i = 0; i < args.length; i++)
                     pargs[i + 1] = args[i];
                 args = pargs;
+            } else {
+                args = new String[] { executable };
             }
             return Runtime.getRuntime().exec(args, envp, workingDirectory);
         }
