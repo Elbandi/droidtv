@@ -210,26 +210,67 @@ public class ChannelsActivity extends Activity {
         static final int OK = 0;
         static final int CHECK_DEVICE = R.string.no_device;
 
-        static final String FILE_DEV_DVB_ADAPTER = "/dev/dvb/adapter0";
-        static final String FILE_DVB_CA = FILE_DEV_DVB_ADAPTER + "/ca0";
-        static final String FILE_DVB_FRONTEND = FILE_DEV_DVB_ADAPTER + "/frontend0";
-        static final String FILE_DVB_DEMUX = FILE_DEV_DVB_ADAPTER + "/demux0";
-        static final String FILE_DVB_DVR = FILE_DEV_DVB_ADAPTER + "/dvr0";
+        static final String LEGACY_DEV_DVB_ADAPTER = "/dev/dvb0";
+        final File LEGACY_FILE_DVB_CA = new File(LEGACY_DEV_DVB_ADAPTER + ".ca0");
+        final File LEGACY_FILE_DVB_FRONTEND = new File(LEGACY_DEV_DVB_ADAPTER + ".frontend0");
+        final File LEGACY_FILE_DVB_DEMUX = new File(LEGACY_DEV_DVB_ADAPTER + ".demux0");
+        final File LEGACY_FILE_DVB_DVR = new File(LEGACY_DEV_DVB_ADAPTER + ".dvr0");
 
-        private boolean checkDeviceNode(String file, boolean checkExists) {
-            File f = new File(file);
+        static final String DEV_DVB_ADAPTER = "/dev/dvb/adapter0";
+        final File FILE_DVB_CA = new File(DEV_DVB_ADAPTER + "/ca0");
+        final File FILE_DVB_FRONTEND = new File(DEV_DVB_ADAPTER + "/frontend0");
+        final File FILE_DVB_DEMUX = new File(DEV_DVB_ADAPTER + "/demux0");
+        final File FILE_DVB_DVR = new File(DEV_DVB_ADAPTER + "/dvr0");
+
+        private boolean verifyDeviceNode(File deviceNode, File legacyDeviceNode, boolean checkExists) {
             if (checkExists) {
-                return f.exists() && f.canRead() && f.canWrite();
+                if (deviceNode.exists()) {
+                    if (!deviceNode.canRead() || !deviceNode.canWrite()) {
+                        fixPermission(deviceNode);
+                    }
+                } else if (legacyDeviceNode.exists()) {
+                    if (!legacyDeviceNode.canRead() || !legacyDeviceNode.canWrite()) {
+                        fixPermission(legacyDeviceNode);
+                    }
+                    createSymlink(legacyDeviceNode, deviceNode);
+                } else {
+                    return false;
+                }
+                return deviceNode.exists() && deviceNode.canRead() && deviceNode.canWrite();
             } else {
-                return !f.exists() || f.exists() && f.canRead() && f.canWrite();
+                if (deviceNode.exists() || legacyDeviceNode.exists()) {
+                    return verifyDeviceNode(deviceNode, legacyDeviceNode, true);
+                } else {
+                    return true;
+                }
+            }
+        }
+
+        private void fixPermission(File file) {
+            try {
+                Process p = ProcessUtils.runAsRoot("chmod", "666", file.getAbsolutePath());
+                p.waitFor();
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to fix permission: " + file.getAbsolutePath(), e);
+            }
+        }
+
+        private void createSymlink(File target, File symlink) {
+            try {
+                Process p = ProcessUtils.runAsRoot("ln", "-s", target.getAbsolutePath(),
+                        symlink.getAbsolutePath());
+                p.waitFor();
+            } catch (Exception e) {
+                Log.w(TAG, "Failed to create symlink: " + target.getAbsolutePath() + " <- "
+                        + symlink.getAbsolutePath());
             }
         }
 
         private boolean checkDevice() {
-            return checkDeviceNode(FILE_DVB_FRONTEND, true)
-                    && checkDeviceNode(FILE_DVB_DEMUX, true)
-                    && checkDeviceNode(FILE_DVB_DVR, true)
-                    && checkDeviceNode(FILE_DVB_CA, false);
+            return verifyDeviceNode(FILE_DVB_FRONTEND, LEGACY_FILE_DVB_FRONTEND, true)
+                    && verifyDeviceNode(FILE_DVB_DEMUX, LEGACY_FILE_DVB_DEMUX, true)
+                    && verifyDeviceNode(FILE_DVB_DVR, LEGACY_FILE_DVB_DVR, true)
+                    && verifyDeviceNode(FILE_DVB_CA, LEGACY_FILE_DVB_CA, false);
         }
 
         @Override
