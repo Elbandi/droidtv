@@ -160,9 +160,8 @@ class Utils {
                 String... args) throws IOException {
             if (args.length > 0) {
                 String[] pargs = new String[args.length + 1];
+                System.arraycopy(args, 0, pargs, 1, args.length);
                 pargs[0] = executable;
-                for (int i = 0; i < args.length; i++)
-                    pargs[i + 1] = args[i];
                 args = pargs;
             } else {
                 args = new String[] { executable };
