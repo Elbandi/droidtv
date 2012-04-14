@@ -282,6 +282,8 @@ public class ChannelsActivity extends Activity {
 
         @Override
         protected Integer doInBackground(Void... params) {
+            // check for device access
+            publishProgress(CHECK_DEVICE);
             // kill old instance if still running
             try {
                 ProcessUtils.killBinary(getApplicationContext(), StreamActivity.DVBLAST);
@@ -289,8 +291,6 @@ public class ChannelsActivity extends Activity {
             } catch (IOException e) {
                 Log.w(TAG, "kill previous instances", e);
             }
-            // check for device access
-            publishProgress(CHECK_DEVICE);
             if (!checkDevice())
                 return CHECK_DEVICE;
             // everything fine
