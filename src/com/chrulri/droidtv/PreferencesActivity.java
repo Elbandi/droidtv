@@ -18,13 +18,13 @@
 
 package com.chrulri.droidtv;
 
-import static com.chrulri.droidtv.Utils.Prefs.KEY_SCANCHANNELS;
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.Preference.OnPreferenceClickListener;
 import android.preference.PreferenceActivity;
+
+import com.chrulri.droidtv.utils.PreferenceUtils;
 
 public class PreferencesActivity extends PreferenceActivity {
 
@@ -33,7 +33,7 @@ public class PreferencesActivity extends PreferenceActivity {
         super.onCreate(savedInstanceState);
         addPreferencesFromResource(R.layout.preferences);
         // setup scan button
-        Preference scanButton = findPreference(KEY_SCANCHANNELS);
+        Preference scanButton = findPreference(PreferenceUtils.KEY_SCANCHANNELS);
         scanButton.setOnPreferenceClickListener(new OnPreferenceClickListener() {
             @Override
             public boolean onPreferenceClick(Preference preference) {

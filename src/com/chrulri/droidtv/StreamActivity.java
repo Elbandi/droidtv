@@ -18,7 +18,7 @@
 
 package com.chrulri.droidtv;
 
-import static com.chrulri.droidtv.Utils.NEWLINE;
+import static com.chrulri.droidtv.utils.StringUtils.NEWLINE;
 
 import android.app.Activity;
 import android.media.MediaPlayer;
@@ -28,8 +28,10 @@ import android.os.Message;
 import android.util.Log;
 import android.widget.VideoView;
 
-import com.chrulri.droidtv.Utils.ProcessUtils;
+import com.chrulri.droidtv.utils.ErrorUtils;
 import com.chrulri.droidtv.utils.ParallelTask;
+import com.chrulri.droidtv.utils.ProcessUtils;
+import com.chrulri.droidtv.utils.StringUtils;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -229,7 +231,7 @@ public class StreamActivity extends Activity {
                 return name;
             } catch (IOException e) {
                 Log.e(TAG, "starting stream failed", e);
-                Utils.error(this, "failed to start streaming", e);
+                ErrorUtils.error(this, "failed to start streaming", e);
                 return null;
             }
         } finally {
@@ -447,13 +449,13 @@ public class StreamActivity extends Activity {
                         int read = 0;
                         String str;
                         // handle dvblast info
-                        str = Utils.readAll(dvblast.getInputStream());
+                        str = StringUtils.readAll(dvblast.getInputStream());
                         if (str.length() > 0) {
                             read += str.length();
                             // TODO parse DOM and handle
                         }
                         // read error log
-                        str = Utils.readAll(dvblast.getErrorStream());
+                        str = StringUtils.readAll(dvblast.getErrorStream());
                         if (str.length() > 0) {
                             read += str.length();
                             mErrorLogger.write(str);
