@@ -216,20 +216,35 @@ public class ChannelsActivity extends Activity {
         static final String FILE_DVB_DEMUX = FILE_DEV_DVB_ADAPTER + "/demux0";
         static final String FILE_DVB_DVR = FILE_DEV_DVB_ADAPTER + "/dvr0";
 
-        private boolean checkDeviceNode(String file, boolean checkExists) {
-            File f = new File(file);
+        private boolean checkDeviceNode(File file, boolean checkExists) {
             if (checkExists) {
-                return f.exists() && f.canRead() && f.canWrite();
+                return file.canRead() && file.canWrite();
             } else {
-                return !f.exists() || f.exists() && f.canRead() && f.canWrite();
+                return !file.exists() || file.canRead() && file.canWrite();
             }
         }
 
         private boolean checkDevice() {
-            return checkDeviceNode(FILE_DVB_FRONTEND, true)
-                    && checkDeviceNode(FILE_DVB_DEMUX, true)
-                    && checkDeviceNode(FILE_DVB_DVR, true)
-                    && checkDeviceNode(FILE_DVB_CA, false);
+
+            File dvbFronted = new File(FILE_DVB_FRONTEND);
+            File dvbDemux = new File(FILE_DVB_DEMUX);
+            File dvbDvr = new File(FILE_DVB_DVR);
+            File dvbCa = new File(FILE_DVB_CA);
+            if (!dvbFronted.exists() || !dvbDemux.exists() || !dvbDvr.exists()) return false;
+            if (checkDeviceNode(dvbFronted, true)
+                    && checkDeviceNode(dvbDemux, true)
+                    && checkDeviceNode(dvbDvr, true)
+                    && checkDeviceNode(dvbCa, false)) return true;
+            try {
+                /* This need rooted device!! */
+                ProcessUtils.runAsRoot("chmod 666 /dev/dvb*").waitFor();
+            } catch (Throwable t) {
+                return false;
+            }
+            return checkDeviceNode(dvbFronted, true)
+                    && checkDeviceNode(dvbDemux, true)
+                    && checkDeviceNode(dvbDvr, true)
+                    && checkDeviceNode(dvbCa, false);
         }
 
         @Override
