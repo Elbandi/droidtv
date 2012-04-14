@@ -1,12 +1,12 @@
 #!/bin/sh
-# droidtv/res-src/build_wscan.sh
+# droidtv/res-src/libs/build_wscan.sh
 # Compiles w_scan for Android
 # Make sure you have ANDROID_NDK defined in .bashrc or .bash_profile
 
 API=8
 SRC_DIR="`pwd`/w_scan-20110329"
-TARGET_FILE="`pwd`/../res/raw/wscan_20110329.bin"
-INSTALL_DIR="`pwd`/../bin"
+TARGET_FILE="`pwd`/../../res/raw/wscan_20110329.bin"
+INSTALL_DIR="`pwd`/../../bin"
 INCLUDE_DIR="`pwd`/include"
 
 cd $SRC_DIR
