@@ -35,9 +35,13 @@
     <linearGradient
        id="linearGradient3926">
       <stop
-         style="stop-color:#ffffff;stop-opacity:1;"
+         style="stop-color:#ffffff;stop-opacity:0;"
          offset="0"
          id="stop3928" />
+      <stop
+         id="stop3940"
+         offset="0.5"
+         style="stop-color:#ffffff;stop-opacity:1;" />
       <stop
          style="stop-color:#ffffff;stop-opacity:0;"
          offset="1"
@@ -47,10 +51,10 @@
        inkscape:collect="always"
        xlink:href="#linearGradient3926"
        id="linearGradient3938"
-       x1="377.41708"
-       y1="598.28723"
-       x2="374.51031"
-       y2="218.96338"
+       x1="380.32388"
+       y1="250.92705"
+       x2="377.41711"
+       y2="620.099"
        gradientUnits="userSpaceOnUse" />
   </defs>
   <sodipodi:namedview
