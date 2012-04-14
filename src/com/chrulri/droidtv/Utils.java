@@ -23,7 +23,6 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.util.AndroidRuntimeException;
 import android.util.Log;
@@ -35,6 +34,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import com.chrulri.droidtv.StreamActivity.DvbType;
+import com.chrulri.droidtv.utils.ParallelTask;
 
 import java.io.DataOutputStream;
 import java.io.File;
@@ -256,16 +256,16 @@ class Utils {
             return new File("/proc", "" + pid).exists();
         }
 
-        public static void finishTask(AsyncTask<?, ?, ?> task, boolean cancel) {
+        public static void finishTask(ParallelTask task, boolean interrupt) {
             if (task == null) {
                 return;
             }
             // cancel task and wait for it to finish
-            task.cancel(cancel);
-            while (task.getStatus() != AsyncTask.Status.FINISHED) {
+            task.cancel(interrupt);
+            while (task.getState() != Thread.State.TERMINATED) {
                 try {
                     Thread.sleep(100);
-                } catch (Throwable t) {
+                } catch (InterruptedException e) {
                     // nop
                 }
             }

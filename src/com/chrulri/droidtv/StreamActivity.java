@@ -22,12 +22,14 @@ import static com.chrulri.droidtv.Utils.NEWLINE;
 
 import android.app.Activity;
 import android.media.MediaPlayer;
-import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.widget.VideoView;
 
 import com.chrulri.droidtv.Utils.ProcessUtils;
+import com.chrulri.droidtv.utils.ParallelTask;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -122,6 +124,7 @@ public class StreamActivity extends Activity {
     private FrontendStatus mFrontendStatus;
     private String mChannelName;
     private String mChannelConfig;
+    private final Handler mHandler = new Handler();
     private AsyncDvblastTask mDvblastTask;
     private AsyncDvblastCtlTask mDvblastCtlTask;
     private AsyncStreamTask mStreamTask;
@@ -246,9 +249,9 @@ public class StreamActivity extends Activity {
                 // nop
             }
         }
-        mDvblastCtlTask.cancel(false);
-        mStreamTask.cancel(true);
-        mDvblastTask.cancel(true);
+        ProcessUtils.finishTask(mDvblastCtlTask, false);
+        ProcessUtils.finishTask(mStreamTask, true);
+        ProcessUtils.finishTask(mDvblastTask, true);
         Log.d(TAG, "<<< stopStream");
     }
 
@@ -263,13 +266,13 @@ public class StreamActivity extends Activity {
         }
     }
 
-    class AsyncStreamTask extends AsyncTask<Void, Void, Void> {
+    class AsyncStreamTask extends ParallelTask {
 
         final String TAG = StreamActivity.TAG + "." + AsyncStreamTask.class.getSimpleName();
 
         @Override
-        protected Void doInBackground(Void... params) {
-            Log.d(TAG, ">>> AsyncStreamTask");
+        protected void doInBackground() {
+            Log.d(TAG, ">>>");
             byte[] data = new byte[4096];
             DatagramPacket dataPacket = new DatagramPacket(data, data.length);
             while (!isCancelled()) {
@@ -300,25 +303,17 @@ public class StreamActivity extends Activity {
                     Log.e(TAG, "STREAM", e);
                 }
             }
-            Log.d(TAG, "<<< AsyncStreamTask");
-            return null;
+            Log.d(TAG, "<<<");
         }
     }
 
-    class AsyncDvblastCtlTask extends AsyncTask<Void, FrontendStatus, Void> {
+    class AsyncDvblastCtlTask extends ParallelTask {
 
         final String TAG = StreamActivity.TAG + "." + AsyncDvblastCtlTask.class.getSimpleName();
 
         @Override
-        protected void onProgressUpdate(FrontendStatus... values) {
-            mFrontendStatus = values[0];
-            Log.d(TAG, "fe_status: " + mFrontendStatus);
-            updateTitle();
-        }
-
-        @Override
-        protected Void doInBackground(Void... params) {
-            Log.d(TAG, ">>> AsyncDvblastCtlTask");
+        protected void doInBackground() {
+            Log.d(TAG, ">>>");
             try {
                 Thread.sleep(DVBLAST_CHECKDELAY);
             } catch (InterruptedException e) {
@@ -380,8 +375,19 @@ public class StreamActivity extends Activity {
                     continue;
                 }
             }
-            Log.d(TAG, "<<< AsyncDvblastCtlTask");
-            return null;
+            Log.d(TAG, "<<<");
+        }
+
+        private void publishProgress(FrontendStatus status) {
+            mFrontendStatus = status;
+            Message msg = Message.obtain(mHandler, new Runnable() {
+                @Override
+                public void run() {
+                    Log.d(TAG, "fe_status: " + mFrontendStatus);
+                    updateTitle();
+                }
+            });
+            mHandler.sendMessage(msg);
         }
 
         private Document getDomElement(InputStream xmlStream) {
@@ -407,7 +413,7 @@ public class StreamActivity extends Activity {
 
     }
 
-    class AsyncDvblastTask extends AsyncTask<Void, CharSequence, Void> {
+    class AsyncDvblastTask extends ParallelTask {
         final String TAG = StreamActivity.TAG + "." + AsyncDvblastTask.class.getSimpleName();
 
         private File mErrorLog;
@@ -427,7 +433,7 @@ public class StreamActivity extends Activity {
         }
 
         @Override
-        protected Void doInBackground(Void... params) {
+        protected void doInBackground() {
             Log.d(TAG, ">>>");
             try {
                 Process dvblast = ProcessUtils.runBinary(StreamActivity.this, DVBLAST,
@@ -475,7 +481,6 @@ public class StreamActivity extends Activity {
                 Log.e(TAG, "dvblast", t);
             }
             Log.d(TAG, "<<<");
-            return null;
         }
     }
 
