@@ -259,8 +259,9 @@ public class ChannelsActivity extends Activity {
 
         private void createSymlink(File target, File symlink) {
             try {
-                Process p = ProcessUtils.runAsRoot("ln", "-s", target.getAbsolutePath(),
-                        symlink.getAbsolutePath());
+                Process p = ProcessUtils.runAsRoot(
+                        "mkdir", "-p", symlink.getParentFile().getAbsolutePath(), "\n",
+                        "ln", "-s", target.getAbsolutePath(), symlink.getAbsolutePath());
                 p.waitFor();
             } catch (Exception e) {
                 Log.w(TAG, "Failed to create symlink: " + target.getAbsolutePath() + " <- "
