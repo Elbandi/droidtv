@@ -3,6 +3,6 @@
 /assets
 /obj
 /libs/*/gdb*
-/res-src/w_scan-*
-/res-src/bitstream-*
-/res-src/dvblast-*
+/res-src/libs/w_scan-*
+/res-src/libs/bitstream-*
+/res-src/libs/dvblast-*

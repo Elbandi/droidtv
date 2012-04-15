@@ -36,9 +36,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.chrulri.droidtv.StreamActivity.DvbType;
-import com.chrulri.droidtv.Utils.Prefs;
-import com.chrulri.droidtv.Utils.ProcessUtils;
-import com.chrulri.droidtv.Utils.StringUtils;
+import com.chrulri.droidtv.utils.ErrorUtils;
+import com.chrulri.droidtv.utils.PreferenceUtils;
+import com.chrulri.droidtv.utils.ProcessUtils;
+import com.chrulri.droidtv.utils.StringUtils;
+import com.chrulri.droidtv.utils.Utils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -896,7 +898,7 @@ public class ScanActivity extends Activity implements OnClickListener,
             setEnabled(false);
             _textView.setText(null);
             // dvbType
-            _dvbType = Prefs.getDvbType(ScanActivity.this);
+            _dvbType = PreferenceUtils.getDvbType(ScanActivity.this);
             _type = (String) Utils.decode(_dvbType, DvbType.ATSC, "a",
                     DvbType.DVBC, "c",
                     DvbType.DVBS, "s",
@@ -905,7 +907,7 @@ public class ScanActivity extends Activity implements OnClickListener,
             int countryIdx = _countryList.getSelectedItemPosition();
             if (countryIdx == AdapterView.INVALID_POSITION) {
                 // TODO localize error
-                Utils.error(ScanActivity.this, "no country selected");
+                ErrorUtils.error(ScanActivity.this, "no country selected");
                 cancel(true);
                 return;
             }
@@ -914,7 +916,7 @@ public class ScanActivity extends Activity implements OnClickListener,
             String fileName = _fileNameView.getText().toString();
             if (StringUtils.isNullOrEmpty(fileName)) {
                 // TODO localize errror
-                Utils.error(ScanActivity.this,
+                ErrorUtils.error(ScanActivity.this,
                         "please enter file name for channels file");
                 cancel(true);
                 return;
@@ -922,7 +924,7 @@ public class ScanActivity extends Activity implements OnClickListener,
             _outFile = Utils.getConfigsFile(ScanActivity.this, fileName + ".conf");
             // TODO redesign print of type and country
             _textView.append(_type + "/" + _country);
-            _textView.append(Utils.NEWLINE);
+            _textView.append(StringUtils.NEWLINE);
         }
 
         @Override
@@ -935,7 +937,7 @@ public class ScanActivity extends Activity implements OnClickListener,
             if (isCancelled())
                 return;
             _textView.append(values[0]);
-            _textView.append(Utils.NEWLINE);
+            _textView.append(StringUtils.NEWLINE);
             _scrollView.post(new Runnable() {
                 public void run() {
                     _scrollView.fullScroll(ScrollView.FOCUS_DOWN);
@@ -984,7 +986,7 @@ public class ScanActivity extends Activity implements OnClickListener,
                         out.write(buf.toString().getBytes());
                     } catch (IOException e) {
                         // TODO localize error
-                        Utils.error(ScanActivity.this, "failed to save channels file", e);
+                        ErrorUtils.error(ScanActivity.this, "failed to save channels file", e);
                     }
                 }
             } finally {
@@ -1018,11 +1020,11 @@ public class ScanActivity extends Activity implements OnClickListener,
                 } else {
                     // TODO localization
                     Log.e(TAG, "wscan failed (" + exitCode + ")");
-                    Utils.error(ScanActivity.this, "wscan failed (" + exitCode + ")");
+                    ErrorUtils.error(ScanActivity.this, "wscan failed (" + exitCode + ")");
                 }
             } catch (Throwable t) {
                 Log.e(TAG, "wscan", t);
-                Utils.error(ScanActivity.this, "wscan", t);
+                ErrorUtils.error(ScanActivity.this, "wscan", t);
             }
             return null;
         }

@@ -33,9 +33,11 @@ import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import com.chrulri.droidtv.Utils.Prefs;
-import com.chrulri.droidtv.Utils.ProcessUtils;
-import com.chrulri.droidtv.Utils.StringUtils;
+import com.chrulri.droidtv.utils.ErrorUtils;
+import com.chrulri.droidtv.utils.PreferenceUtils;
+import com.chrulri.droidtv.utils.ProcessUtils;
+import com.chrulri.droidtv.utils.StringUtils;
+import com.chrulri.droidtv.utils.Utils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -101,14 +103,14 @@ public class ChannelsActivity extends Activity {
         loadChannelLists();
         setChannelList(null);
         if (mSpinner.getAdapter().getCount() == 0) {
-            Utils.openSettings(this);
+            PreferenceUtils.openSettings(this);
         }
     }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_MENU) {
-            Utils.openSettings(this);
+            PreferenceUtils.openSettings(this);
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -155,7 +157,7 @@ public class ChannelsActivity extends Activity {
                     .size()]);
             mChannels = channelList.toArray(new String[channelList.size()]);
         } catch (IOException e) {
-            Utils.error(this, getText(R.string.error_invalid_channel_configuration), e);
+            ErrorUtils.error(this, getText(R.string.error_invalid_channel_configuration), e);
         }
 
         // update channel list view
@@ -168,7 +170,7 @@ public class ChannelsActivity extends Activity {
      */
     private void setChannelList(String channelList) {
         if (channelList == null) {
-            channelList = Prefs.get(this).getString(Prefs.KEY_CHANNELCONFIGS, null);
+            channelList = PreferenceUtils.get(this).getString(PreferenceUtils.KEY_CHANNELCONFIGS, null);
         }
 
         if (StringUtils.isNullOrEmpty(channelList) || Utils.getConfigsFile(this,
@@ -280,6 +282,8 @@ public class ChannelsActivity extends Activity {
 
         @Override
         protected Integer doInBackground(Void... params) {
+            // check for device access
+            publishProgress(CHECK_DEVICE);
             // kill old instance if still running
             try {
                 ProcessUtils.killBinary(getApplicationContext(), StreamActivity.DVBLAST);
@@ -287,8 +291,6 @@ public class ChannelsActivity extends Activity {
             } catch (IOException e) {
                 Log.w(TAG, "kill previous instances", e);
             }
-            // check for device access
-            publishProgress(CHECK_DEVICE);
             if (!checkDevice())
                 return CHECK_DEVICE;
             // everything fine
@@ -313,7 +315,7 @@ public class ChannelsActivity extends Activity {
                 onCreateImpl();
             } else {
                 // show alert and abort application
-                Utils.error(ChannelsActivity.this, getText(result), new View.OnClickListener() {
+                ErrorUtils.error(ChannelsActivity.this, getText(result), new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         finish();

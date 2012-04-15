@@ -18,7 +18,7 @@
 
 package com.chrulri.droidtv;
 
-import static com.chrulri.droidtv.Utils.NEWLINE;
+import static com.chrulri.droidtv.utils.StringUtils.NEWLINE;
 
 import android.app.Activity;
 import android.media.MediaPlayer;
@@ -28,8 +28,10 @@ import android.os.Message;
 import android.util.Log;
 import android.widget.VideoView;
 
-import com.chrulri.droidtv.Utils.ProcessUtils;
+import com.chrulri.droidtv.utils.ErrorUtils;
 import com.chrulri.droidtv.utils.ParallelTask;
+import com.chrulri.droidtv.utils.ProcessUtils;
+import com.chrulri.droidtv.utils.StringUtils;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
@@ -82,8 +84,10 @@ public class StreamActivity extends Activity {
         public static final int HAS_LOCK = 0x0F;
         public static final int REINIT = 0x10;
 
+        public static final int SIGNAL_MAXVALUE = 0xFFFF;
+
         public int status;
-        public int ber;
+        public long ber;
         public int signal;
         public int snr;
 
@@ -119,7 +123,7 @@ public class StreamActivity extends Activity {
     static final String DVBLAST_CONFIG_FILENAME = "dvblast.conf";
     static final String DVBLAST_SOCKET = "droidtv.socket";
     static final String DVBLAST_LOG = "dvblast.log";
-    static final int DVBLAST_CHECKDELAY = 1000;
+    static final int DVBLAST_CHECKDELAY = 500;
 
     private FrontendStatus mFrontendStatus;
     private String mChannelName;
@@ -229,7 +233,7 @@ public class StreamActivity extends Activity {
                 return name;
             } catch (IOException e) {
                 Log.e(TAG, "starting stream failed", e);
-                Utils.error(this, "failed to start streaming", e);
+                ErrorUtils.error(this, "failed to start streaming", e);
                 return null;
             }
         } finally {
@@ -319,6 +323,8 @@ public class StreamActivity extends Activity {
             } catch (InterruptedException e) {
                 // nop
             }
+            final FrontendStatus status = new FrontendStatus();
+            mFrontendStatus = status;
             while (!isCancelled()) {
                 try {
                     Process dvblastctl = ProcessUtils.runBinary(StreamActivity.this, DVBLASTCTL,
@@ -330,7 +336,6 @@ public class StreamActivity extends Activity {
                         continue;
                     }
                     Document dom = getDomElement(dvblastctl.getInputStream());
-                    FrontendStatus status = new FrontendStatus();
                     NodeList statusList = dom.getElementsByTagName("STATUS");
                     for (int i = 0; i < statusList.getLength(); i++) {
                         Node node = statusList.item(i);
@@ -355,16 +360,16 @@ public class StreamActivity extends Activity {
                         Node node = valueList.item(i);
                         Node valueNode = node.getAttributes().item(0);
                         String valueName = valueNode.getNodeName();
-                        int value = Integer.parseInt(valueNode.getNodeValue());
+                        String value = valueNode.getNodeValue();
                         if ("bit_error_rate".equalsIgnoreCase(valueName)) {
-                            status.ber = value;
+                            status.ber = Long.parseLong(value);
                         } else if ("signal_strength".equalsIgnoreCase(valueName)) {
-                            status.signal = value;
+                            status.signal = Integer.parseInt(value);
                         } else if ("snr".equalsIgnoreCase(valueName)) {
-                            status.snr = value;
+                            status.snr = Integer.parseInt(value);
                         }
                     }
-                    publishProgress(status);
+                    publishProgress();
                 } catch (Throwable t) {
                     Log.w(TAG, "dvblastctl", t);
                 }
@@ -375,11 +380,11 @@ public class StreamActivity extends Activity {
                     continue;
                 }
             }
+            mFrontendStatus = null;
             Log.d(TAG, "<<<");
         }
 
-        private void publishProgress(FrontendStatus status) {
-            mFrontendStatus = status;
+        private void publishProgress() {
             Message msg = Message.obtain(mHandler, new Runnable() {
                 @Override
                 public void run() {
@@ -447,13 +452,13 @@ public class StreamActivity extends Activity {
                         int read = 0;
                         String str;
                         // handle dvblast info
-                        str = Utils.readAll(dvblast.getInputStream());
+                        str = StringUtils.readAll(dvblast.getInputStream());
                         if (str.length() > 0) {
                             read += str.length();
                             // TODO parse DOM and handle
                         }
                         // read error log
-                        str = Utils.readAll(dvblast.getErrorStream());
+                        str = StringUtils.readAll(dvblast.getErrorStream());
                         if (str.length() > 0) {
                             read += str.length();
                             mErrorLogger.write(str);
@@ -497,8 +502,9 @@ public class StreamActivity extends Activity {
     private void updateTitle() {
         String str = mChannelName;
         if (mFrontendStatus != null) {
-            str += "  [Signal: " + mFrontendStatus.signal + ", Error: "
-                    + mFrontendStatus.ber + "]";
+            str += String.format("  [Signal: %2d%%, Error: %d]",
+                    (mFrontendStatus.signal * 100 / FrontendStatus.SIGNAL_MAXVALUE),
+                    (mFrontendStatus.ber));
         }
         setTitle(str);
     }
