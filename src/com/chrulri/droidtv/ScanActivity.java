@@ -962,22 +962,14 @@ public class ScanActivity extends Activity implements OnClickListener,
                                         throw new IOException(
                                                 "invalid ATSC params count[" + params.length + "]");
                                     }
-                                    buf.append(params[0]); // name
-                                    buf.append(':');
-                                    buf.append(params[1]); // freq
-                                    buf.append(':');
-                                    buf.append(params[5]); // sid
+                                    buf.append(line);
                                     break;
                                 case DVBT:
                                     if (params.length != 13) {
                                         throw new IOException(
                                                 "invalid DVB-T params count[" + params.length + "]");
                                     }
-                                    buf.append(params[0]); // name
-                                    buf.append(':');
-                                    buf.append(params[1]); // freq
-                                    buf.append(':');
-                                    buf.append(params[12]); // sid
+                                    buf.append(line);
                                     break;
                             }
                             buf.append('\n');

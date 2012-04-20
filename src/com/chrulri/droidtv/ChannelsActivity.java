@@ -20,6 +20,7 @@ package com.chrulri.droidtv;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -36,6 +37,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.chrulri.droidtv.utils.ErrorUtils;
+import com.chrulri.droidtv.utils.ParallelTask;
 import com.chrulri.droidtv.utils.PreferenceUtils;
 import com.chrulri.droidtv.utils.ProcessUtils;
 import com.chrulri.droidtv.utils.StringUtils;
@@ -45,16 +47,18 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ChannelsActivity extends Activity {
     private static final String TAG = ChannelsActivity.class.getSimpleName();
+    static final int TZAP = R.raw.tzap_1355;
 
     private Spinner mSpinner;
     private ListView mListView;
-    private String[] mChannelConfigs;
     private String[] mChannels;
+    private AsyncZapTaskTask mZapTask;
 
     // ************************************************************** //
     // * ACTIVITY *************************************************** //
@@ -73,6 +77,28 @@ public class ChannelsActivity extends Activity {
         Log.d(TAG, ">>> onDestroy");
         super.onDestroy();
         Log.d(TAG, "<<< onDestroy");
+    }
+
+    @Override
+    protected void onStop() {
+        Log.d(TAG, ">>> onStop");
+        super.onStop();
+        Log.d(TAG, "<<< onStop");
+    }
+
+    @Override
+    protected void onStart() {
+        Log.d(TAG, ">>> onStart");
+        super.onStart();
+        Log.d(TAG, "<<< onStart");
+    }
+
+    @Override
+    protected void onResume() {
+        Log.d(TAG, ">>> onResume");
+        super.onResume();
+        ProcessUtils.finishTask(mZapTask, true);
+        Log.d(TAG, "<<< onResume");
     }
 
     private void onCreateImpl() {
@@ -172,20 +198,15 @@ public class ChannelsActivity extends Activity {
         }
 
         // load channels
-        mChannelConfigs = null;
         mChannels = null;
         try {
-            List<String> channelConfigList = new ArrayList<String>();
             List<String> channelList = new ArrayList<String>();
             BufferedReader reader = new BufferedReader(new FileReader(file));
             String line;
             while ((line = reader.readLine()) != null) {
-                channelConfigList.add(line);
                 channelList.add(line.split(":")[0]);
             }
             reader.close();
-            mChannelConfigs = channelConfigList.toArray(new String[channelConfigList
-                    .size()]);
             mChannels = channelList.toArray(new String[channelList.size()]);
         } catch (IOException e) {
             ErrorUtils.error(this, getText(R.string.error_invalid_channel_configuration), e);
@@ -228,10 +249,49 @@ public class ChannelsActivity extends Activity {
 
     private void watchChannel(int channelId) {
         Log.d(TAG, "watchChannel(" + channelId + "): " + mChannels[channelId]);
-        String channelconfig = mChannelConfigs[channelId];
-        Intent intent = new Intent(this, StreamActivity.class);
-        intent.putExtra(StreamActivity.EXTRA_CHANNELCONFIG, channelconfig);
+        File channelfile  = Utils.getConfigsFile(this, (String)mSpinner.getSelectedItem());
+        String channelconfig = mChannels[channelId];
+        mZapTask = new AsyncZapTaskTask(channelfile, channelconfig);
+        mZapTask.execute();
+
+        Intent intent = new Intent();
+        intent.setAction(android.content.Intent.ACTION_VIEW);
+        File file = new File("/dev/dvb/adapter0/dvr0");
+        intent.setDataAndType(Uri.fromFile(file), "video/*");
         startActivity(intent);
+    }
+
+    class AsyncZapTaskTask extends ParallelTask {
+        private File mChannelFile;
+        private String mChannel;
+
+        public AsyncZapTaskTask(File ChannelFile, String Channel) {
+            mChannelFile = ChannelFile;
+            mChannel = Channel;
+        }
+
+        @Override
+        protected void doInBackground() {
+            Log.d(TAG, ">>>");
+            try {
+                Process dvblast = ProcessUtils.runBinary(ChannelsActivity.this, ChannelsActivity.TZAP,
+                    "-r", "-c", mChannelFile.getAbsolutePath(), "-H", mChannel);
+                int exitCode = dvblast.waitFor();
+                InputStream out = dvblast.getInputStream();
+                InputStream err = dvblast.getErrorStream();
+                Log.d(TAG, "Result: "+exitCode);
+                Log.d(TAG, "Out: "+ StringUtils.readAll(out));
+                Log.d(TAG, "Err: "+ StringUtils.readAll(err));
+            } catch (InterruptedException i) {
+                // FIXME: it's normal exit?
+                try {
+                    ProcessUtils.killBinary(getApplicationContext(), ChannelsActivity.TZAP);
+                } catch(IOException e) {}
+            } catch (Throwable t) {
+                Log.e(TAG, "tzap", t);
+            }
+            Log.d(TAG, "<<<");
+        }
     }
 
     // ************************************************************** //
@@ -318,8 +378,7 @@ public class ChannelsActivity extends Activity {
             publishProgress(CHECK_DEVICE);
             // kill old instance if still running
             try {
-                ProcessUtils.killBinary(getApplicationContext(), StreamActivity.DVBLAST);
-                ProcessUtils.killBinary(getApplicationContext(), StreamActivity.DVBLASTCTL);
+                ProcessUtils.killBinary(getApplicationContext(), ChannelsActivity.TZAP);
             } catch (IOException e) {
                 Log.w(TAG, "kill previous instances", e);
             }
