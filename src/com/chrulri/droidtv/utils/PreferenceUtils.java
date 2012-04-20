@@ -24,7 +24,6 @@ import android.content.SharedPreferences;
 import android.preference.PreferenceManager;
 
 import com.chrulri.droidtv.PreferencesActivity;
-import com.chrulri.droidtv.StreamActivity.DvbType;
 
 public final class PreferenceUtils {
     static final String TAG = PreferenceUtils.class.getName();
@@ -36,6 +35,10 @@ public final class PreferenceUtils {
     public static SharedPreferences get(Context ctx) {
         return PreferenceManager.getDefaultSharedPreferences(ctx
                 .getApplicationContext());
+    }
+
+    public enum DvbType {
+        ATSC, DVBT, DVBC, DVBS
     }
 
     /***

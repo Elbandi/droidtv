@@ -72,10 +72,6 @@ public class StreamActivity extends Activity {
 
     public static final String EXTRA_CHANNELCONFIG = "channelconfig";
 
-    public enum DvbType {
-        ATSC, DVBT, DVBC, DVBS
-    }
-
     public class FrontendStatus {
         public static final int HAS_SIGNAL = 0x001;
         public static final int HAS_CARRIER = 0x02;

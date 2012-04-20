@@ -35,9 +35,9 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.chrulri.droidtv.StreamActivity.DvbType;
 import com.chrulri.droidtv.utils.ErrorUtils;
 import com.chrulri.droidtv.utils.PreferenceUtils;
+import com.chrulri.droidtv.utils.PreferenceUtils.DvbType;
 import com.chrulri.droidtv.utils.ProcessUtils;
 import com.chrulri.droidtv.utils.StringUtils;
 import com.chrulri.droidtv.utils.Utils;

@@ -26,8 +26,8 @@ import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.Preference.OnPreferenceClickListener;
 import android.preference.PreferenceActivity;
 
-import com.chrulri.droidtv.StreamActivity.DvbType;
 import com.chrulri.droidtv.utils.PreferenceUtils;
+import com.chrulri.droidtv.utils.PreferenceUtils.DvbType;
 
 public class PreferencesActivity extends PreferenceActivity {
 
