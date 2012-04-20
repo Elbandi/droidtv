@@ -41,7 +41,7 @@ public final class StringUtils {
         Writer out = new StringWriter();
         char[] buf = new char[BUFFER_SIZE];
         int todo = in.available();
-        Reader reader = new InputStreamReader(in);
+        Reader reader = new InputStreamReader(in, "ISO-8859-2");
         int len;
         if (todo == 0) {
             // nop
