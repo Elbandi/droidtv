@@ -44,7 +44,11 @@ public final class PreferenceUtils {
      */
     public static DvbType getDvbType(Context ctx) {
         String dvbType = get(ctx).getString(KEY_DVBTYPE, null);
-        return Enum.valueOf(DvbType.class, dvbType);
+        return Enum.valueOf(DvbType.class, dvbType.toUpperCase());
+    }
+
+    public static void setDvbType(Context ctx, DvbType dvbType) {
+        get(ctx).edit().putString(KEY_DVBTYPE, dvbType.name().toUpperCase());
     }
 
     public static void openSettings(Context context) {

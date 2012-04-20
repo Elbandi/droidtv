@@ -20,10 +20,13 @@ package com.chrulri.droidtv;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.preference.ListPreference;
 import android.preference.Preference;
+import android.preference.Preference.OnPreferenceChangeListener;
 import android.preference.Preference.OnPreferenceClickListener;
 import android.preference.PreferenceActivity;
 
+import com.chrulri.droidtv.StreamActivity.DvbType;
 import com.chrulri.droidtv.utils.PreferenceUtils;
 
 public class PreferencesActivity extends PreferenceActivity {
@@ -41,6 +44,21 @@ public class PreferencesActivity extends PreferenceActivity {
                         ScanActivity.class);
                 startActivity(settingsActivity);
                 return true;
+            }
+        });
+        ListPreference dvbtypesList = (ListPreference)findPreference(PreferenceUtils.KEY_DVBTYPE);
+        dvbtypesList.setOnPreferenceChangeListener(new OnPreferenceChangeListener() {
+            @Override
+            public boolean onPreferenceChange(Preference arg0, Object arg1) {
+                PreferenceUtils.setDvbType(PreferencesActivity.this, Enum.valueOf(DvbType.class, (String)arg1));
+                return false;
+            }
+        });
+        dvbtypesList.setOnPreferenceClickListener(new OnPreferenceClickListener() {
+            @Override
+            public boolean onPreferenceClick(Preference arg0) {
+                ((ListPreference)arg0).setDefaultValue(PreferenceUtils.getDvbType(PreferencesActivity.this).name().toUpperCase());
+                return false;
             }
         });
     }
