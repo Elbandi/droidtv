@@ -24,6 +24,8 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
@@ -100,6 +102,10 @@ public class ChannelsActivity extends Activity {
         });
 
         // start
+        setupChannelList();
+    }
+
+    private void setupChannelList() {
         loadChannelLists();
         setChannelList(null);
         if (mSpinner.getAdapter().getCount() == 0) {
@@ -114,6 +120,31 @@ public class ChannelsActivity extends Activity {
             return true;
         }
         return super.onKeyDown(keyCode, event);
+    }
+
+    private static final int MENU_RESCAN = 1;
+    private static final int MENU_DROP = 2;
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(0, MENU_RESCAN, 0, "Rescan Channels");
+        menu.add(0, MENU_DROP, 0, "Drop Channel");
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int itemid = item.getItemId();
+        if (itemid == MENU_RESCAN) {
+            PreferenceUtils.openSettings(this);
+        } else if (itemid == MENU_DROP) {
+            File channelfile = Utils.getConfigsFile(this, (String)mSpinner.getSelectedItem());
+            if (channelfile.exists()) channelfile.delete();
+            setupChannelList();
+        } else {
+            return super.onOptionsItemSelected(item);
+        }
+        return false;
     }
 
     // ************************************************************** //
