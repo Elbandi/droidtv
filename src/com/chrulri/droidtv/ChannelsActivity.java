@@ -126,7 +126,7 @@ public class ChannelsActivity extends Activity {
         mListView.setAdapter(null);
 
         // load channel lists
-        String[] configFiles = Utils.getConfigsDir(this).list();
+        String[] configFiles = Utils.getConfigsDir(this).list(new Utils.ConfigsFilter());
         mSpinner.setAdapter(Utils.createSimpleArrayAdapter(this, configFiles));
     }
 
@@ -175,7 +175,7 @@ public class ChannelsActivity extends Activity {
 
         if (StringUtils.isNullOrEmpty(channelList) || Utils.getConfigsFile(this,
                 channelList) == null) {
-            String[] files = Utils.getConfigsDir(this).list();
+            String[] files = Utils.getConfigsDir(this).list(new Utils.ConfigsFilter());
             if (files.length == 1) {
                 channelList = files[0];
             } else {

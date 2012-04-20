@@ -23,6 +23,7 @@ import android.widget.ArrayAdapter;
 import android.widget.BaseAdapter;
 
 import java.io.File;
+import java.io.FilenameFilter;
 
 public final class Utils {
     static final String TAG = Utils.class.getName();
@@ -64,6 +65,14 @@ public final class Utils {
                     return vars[i + 1];
             }
             return (i < vars.length) ? vars[i] : null;
+        }
+    }
+
+    public static final class ConfigsFilter implements FilenameFilter
+    {
+        @Override
+        public boolean accept(File arg0, String arg1) {
+            return arg1.endsWith(".conf");
         }
     }
 }
