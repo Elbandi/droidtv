@@ -178,6 +178,10 @@ public final class ProcessUtils {
     public static void killBinary(Context ctx, int rawId) throws IOException {
         File exe = getBinaryExecutableFile(ctx, rawId);
         String exePath = exe.getCanonicalPath();
+        kill(exePath);
+    }
+
+    public static void kill(String exePath) throws IOException {
         File[] procs = new File("/proc").listFiles(new FilenameFilter() {
             @Override
             public boolean accept(File dir, String filename) {
